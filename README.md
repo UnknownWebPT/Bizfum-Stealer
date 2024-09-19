@@ -13,7 +13,7 @@
 - [Purpose of the Project](#purpose)
 - [Current Features](#current-features)
 - [Coming Features](#coming-features)
-- [Repository Structure](#repo-structure)
+- [Repository Structure](#repository-structure)
 - [Disclaimer](#disclaimer)
 
 ## Installation
