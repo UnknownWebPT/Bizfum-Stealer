@@ -36,6 +36,7 @@ My personal interest in this project stems from the lack of open-source C-based 
 
 ## Current Features
 - Utilizes NtAPI to reduce the likelihood of detection.
+- Dynamically loading pre-installed Dynamic Link Libraries of Windows.
 - Captures screenshots and saves them as bitmap files.
 - Extracts pictures and files based on specific names or extensions.
 - Steals clipboard data.
