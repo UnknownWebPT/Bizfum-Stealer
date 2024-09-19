@@ -50,7 +50,7 @@ My personal interest in this project stems from the lack of open-source C-based 
 - Potential development of a Telegram-based botnet without requiring constant connectivity or request spamming.
 
 ## Repository Structure
-The repository includes both DLL and EXE versions of the malware. This allows for use with a **Reflective DLL Loader**. Both versions have been tested on Windows 10 and Windows 11.
+The repository includes both DLL and EXE versions of the malware. This allows for use of for example a *Reflective DLL Loader*. Both versions have been tested on Windows 10 and Windows 11.
 
 Additionally, a version with debug information is available that does not connect anywhere. The version without debug information will send data and function correctly if set up properly.
 
