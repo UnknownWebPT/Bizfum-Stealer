@@ -10,7 +10,7 @@
 
 ## Table of Contents
 - [Installation](#installation)
-- [Purpose](#purpose)
+- [Purpose of the Project](#purpose)
 - [Current Features](#current-features)
 - [Coming Features](#coming-features)
 - [Repository Structure](#repo-structure)
