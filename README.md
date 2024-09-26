@@ -64,4 +64,5 @@ This software is intended for educational and research purposes only. The author
 
 ## Update Log
 V0.1 - 19th of September - Project started.
+
 V0.2 - 26th of September - Added Firefox && Chrome cookie and password decryption and theft.
