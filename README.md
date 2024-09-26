@@ -44,9 +44,10 @@ My personal interest in this project stems from the lack of open-source C-based 
 - Extracts pictures and files based on specific names or extensions.
 - Steals clipboard data.
 - Captures Discord tokens.
+- Stealing of Chrome and Firefox cookies + passwords.
 
 ## Coming Features
-- Theft of browser passwords and cookies for common browsers.
+- Other browser theft.
 - Self-propagation through applications such as Discord.
 - RSA-based encryption for folders containing stolen data.
 - Uses `winhttp.dll` to upload stolen data to gofile.io via their API.
