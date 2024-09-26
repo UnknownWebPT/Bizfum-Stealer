@@ -3,6 +3,7 @@
 
 #include <windows.h>
 #include <winhttp.h>
+#include <stdio.h>
 #define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
 #define OKAY(MSG, ...) printf("\x1b[97m[\x1b[92m+\x1b[97m] " MSG "\n", ##__VA_ARGS__)
 #define INFO(MSG, ...) printf("\x1b[97m[\x1b[93m!\x1b[97m] " MSG "\n", ##__VA_ARGS__)
@@ -44,4 +45,7 @@ const char* WEIlnsAXWqfYLHUcHqaREFjqBBGaAY(const wchar_t* domain, const wchar_t*
 extern NtLdrLoadDll LoadLib;
 extern NtLdrGetProcedureAddress GetProcAdd;
 extern NtLdrUnloadDll UnloadLib;
+
+
+
 #endif
