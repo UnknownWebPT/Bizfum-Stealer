@@ -49,6 +49,7 @@ My personal interest in this project stems from the lack of open-source C-based 
 ## Coming Features
 - Other browser theft.
 - Self-propagation through applications such as Discord.
+- Zipping of stolen data using a Windows pre-installed dynamic link library.
 - RSA-based encryption for folders containing stolen data.
 - Uses `winhttp.dll` to upload stolen data to gofile.io via their API.
 - Extraction of game tokens or credentials.
