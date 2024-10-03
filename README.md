@@ -13,6 +13,7 @@
 - [Purpose of the Project](#purpose)
 - [Current Features](#current-features)
 - [Coming Features](#coming-features)
+- [DLLs the Stealer Takes Advantage of](#dlls-the-stealer-takes-advantage-of)
 - [Repository Structure](#repository-structure)
 - [Disclaimer](#disclaimer)
 
@@ -53,6 +54,15 @@ My personal interest in this project stems from the lack of open-source C-based 
 - Uses `winhttp.dll` to upload stolen data to gofile.io via their API.
 - Extraction of game tokens or credentials.
 - Potential development of a Telegram-based botnet without requiring constant connectivity or request spamming.
+
+## DLLs the Stealer Takes Advantage of
+- C:\Program Files\Mozilla Firefox\nss3.dll ( If Firefox is installed )
+- C:\Windows\System32\winsqlite3.dll
+- C:\Windows\System32\crypt32.dll
+- C:\Windows\System32\bcrypt.dll
+- C:\Windows\System32\ole32.dll
+- C:\Windows\System32\ntdll.dll
+- C:\Windows\System32\gdi32.dll
 
 ## Repository Structure
 The repository includes both DLL and EXE versions of the malware. This allows for use of for example a *Reflective DLL Loader*. Both versions have been tested on Windows 10 and Windows 11.
