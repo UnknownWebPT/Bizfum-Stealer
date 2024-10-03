@@ -45,12 +45,11 @@ My personal interest in this project stems from the lack of open-source C-based 
 - Steals clipboard data.
 - Captures Discord tokens.
 - Stealing of Chrome and Firefox cookies + passwords.
+- Zipping of stolen data -> AES Encryption of ZIP file -> RSA Encryption of AES Encryption Key.
 
 ## Coming Features
 - Other browser theft.
 - Self-propagation through applications such as Discord.
-- Zipping of stolen data using a Windows pre-installed dynamic link library.
-- RSA-based encryption for folders containing stolen data.
 - Uses `winhttp.dll` to upload stolen data to gofile.io via their API.
 - Extraction of game tokens or credentials.
 - Potential development of a Telegram-based botnet without requiring constant connectivity or request spamming.
@@ -67,3 +66,5 @@ This software is intended for educational and research purposes only. The author
 V0.1 - 19th of September - Project started.
 
 V0.2 - 26th of September - Added Firefox and Chrome (cookie / password) (decryption / stealing).
+
+V0.3 - 3rd of October    - Added Zipping of stolen data && AES Encryption of ZIP file && RSA Encryption of AES Key && Base64 Encoding of RSA encrypted AES Key
