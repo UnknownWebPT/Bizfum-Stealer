@@ -331,12 +331,12 @@ NTSTATUS AES_256_GCM(const BYTE *encryptedData, ULONG encryptedDataLength, const
     // Decrypt the data using the symmetric key and GCM parameters.
     status = pBCryptDecrypt(keyHandle, (PUCHAR)encryptedData, encryptedDataLength, &authInfo, NULL, 0, decryptedData, decryptedDataLength, &bytesDone, 0);
 
-    // Clean up: destroy the key and close the algorithm provider.
+    // Clean up
     pBCryptDestroyKey(keyHandle);
     pBCryptCloseAlgorithmProvider(algHandle, 0);
     UnloadLib(moduleHandle); // Unload the DLL once finished
 
-    return status; // Return final status, success or failure
+    return status; // Return status!
 }
 
 int AES_256_GCM_Setup(char *key, char *ciphertext, DWORD ciphertextSize, char *plaintext)
