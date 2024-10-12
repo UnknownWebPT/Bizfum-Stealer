@@ -78,3 +78,7 @@ V0.1 - 19th of September - Project started.
 V0.2 - 26th of September - Added Firefox and Chrome (cookie / password) (decryption / stealing).
 
 V0.3 - 3rd of October    - Added Zipping of stolen data && AES Encryption of ZIP file && RSA Encryption of AES Key && Base64 Encoding of RSA encrypted AES Key
+
+## Known Issues
+- SQLite function calls act in a unexpected way for 64-bit os.
+
