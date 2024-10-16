@@ -16,6 +16,7 @@
 - [DLLs the Stealer Takes Advantage of](#dlls-the-stealer-takes-advantage-of)
 - [Repository Structure](#repository-structure)
 - [Disclaimer](#disclaimer)
+- [Known Issues](#known-issues)
 
 ## Installation
 The installation process is straightforward. Clone the repository and choose the desired version, as indicated in the repository structure. For instance, to install the version with debug information:
