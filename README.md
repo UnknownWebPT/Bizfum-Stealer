@@ -70,8 +70,60 @@ The repository includes both DLL and EXE versions of the malware. This allows fo
 
 Additionally, a version with debug information is available that does not connect anywhere. The version without debug information will send data and function correctly if set up properly.
 
-## Disclaimer
-This software is intended for educational and research purposes only. The author does not condone or support any illegal or unethical use of this software. Use this tool responsibly and within the boundaries of the law. The author is not liable for any misuse or consequences resulting from the use of this software.
+## 📜 Disclaimer
+
+| ⚠️ **WARNING! READ THIS BEFORE USING THE PROJECT**:
+
+This software is intended for **educational and research purposes only**. **I do not condone or support any illegal or unethical use of this software.** Use this tool responsibly and within the boundaries of the law. The author is **not liable** for any misuse or consequences resulting from the use of this software.
+
+---
+
+### 🔒 Purpose of Telegram Integration
+
+- This project may use **Telegram** for the **sole purpose of sharing a download link to data**, and **NOT** for transmitting or exposing any raw, stolen, or sensitive information directly.
+- All data that may be transmitted via this project is protected by **encryption** methods:
+  - Data is first encrypted using **AES (Advanced Encryption Standard)** with a **32-byte key**.
+  - The AES key is then further encrypted using **RSA encryption** for additional security.
+
+This ensures that the data itself is **unreadable** and **inaccessible** without the appropriate decryption keys.
+
+---
+
+### ❗ User Responsibility and Legal Considerations
+
+- You are **solely responsible** for any use or misuse of this project. By downloading, modifying, or running the code in any environment, **you accept full liability** for any consequences that may arise from its use.
+- This project is **NOT designed for, nor does it condone, any illegal or unethical activity**, including but not limited to:
+  - Unauthorized access to systems or personal information.
+  - Phishing, data theft, or exploitation.
+  - Violation of any platform’s **Terms of Service** (including but not limited to Telegram and Discord).
+  - Any activity prohibited by **local, national, or international laws**, including but not limited to laws on **data privacy**, **computer misuse**, or **hacking**.
+
+The developer does **NOT support or promote** the usage of this code for **malicious actions**, including but not limited to:
+- **Stealing** sensitive information without explicit consent.
+- Engaging in **malicious hacking**, phishing, or exploiting vulnerabilities.
+- Violation of the **Computer Fraud and Abuse Act (CFAA)**, **General Data Protection Regulation (GDPR)**, or other **data privacy and security regulations**.
+
+If you decide to use this project in any way that **violates the law** or the **Terms of Service** of any platform, including **Telegram**, the developer is in **NO WAY LIABLE** for your actions, and you agree to **indemnify and hold harmless** the developer for any claims or damages arising out of such use.
+
+---
+
+### ❓ Intentions Behind This Project
+
+- This project is purely for **research and educational purposes** to demonstrate concepts such as **encryption** and **data exfiltration with consent**.
+- It is assumed that any user who chooses to run this code will do so **on their own system**, with **full awareness** of the impact and risks associated with the code.
+- The use of **Telegram** or any other messaging service to share **encrypted download links** is included solely for the **simplified transmission of links**, **NOT** for the distribution or transmission of **unencrypted** or readable data.
+
+---
+
+### ❌ Final Note
+
+By downloading or using this project, you confirm that:
+
+- You will **NOT** use this code for **illegal, unethical, or malicious purposes**.
+- The developer assumes **ZERO liability** for any actions, damages, or legal consequences arising from your use or misuse of this project.
+
+If you do not agree to the above terms, **DO NOT use or interact** with this project in any way.
+
 
 ## Update Log
 V0.1 - 19th of September - Project started.
