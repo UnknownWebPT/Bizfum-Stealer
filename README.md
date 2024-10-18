@@ -9,14 +9,15 @@
 
 
 ## 📑 Table of Contents
-- [Installation](#installation)
-- [Purpose of the Project](#purpose)
-- [Current Features](#current-features)
-- [Coming Features](#coming-features)
-- [DLLs the Stealer Takes Advantage of](#dlls-the-stealer-takes-advantage-of)
-- [Repository Structure](#repository-structure)
-- [Disclaimer](#disclaimer)
-- [Known Issues](#known-issues)
+- [Installation](#%EF%B8%8F-installation)
+- [Purpose of the Project](#-purpose)
+- [Current Features](#-current-features)
+- [Coming Features](#%EF%B8%8F-coming-features)
+- [DLLs the Stealer Takes Advantage of](#-dlls-the-stealer-takes-advantage-of)
+- [Repository Structure](#%EF%B8%8F-repository-structure)
+- [Disclaimer](#-disclaimer)
+- [Update Log](#-update-log)
+- [Known Issues](#-known-issues)
 
 ## ⚙️ Installation
 The installation process is straightforward. Clone the repository and choose the desired version, as indicated in the repository structure. For instance, to install the version with debug information:
