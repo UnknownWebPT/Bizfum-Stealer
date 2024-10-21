@@ -4,5 +4,6 @@
 #include <windows.h>
 int SubfolderFileFinder(char Files[20][MAX_PATH], char* Folder, int *index);
 int remove_directory(const char *path);
+int Clean(char *OutEncPth);
 void PrintHex(BYTE* data, DWORD size);
 #endif
