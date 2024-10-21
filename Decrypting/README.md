@@ -1,4 +1,4 @@
-This folder will be the output location of the generated RSA private key. Run the setup.py if this is empty!
+This folder will be the output location of the generated RSA private key. Run the config.py if this is empty!
 
 
 The next update will most probably have a Python script to decrypt the encrypted data, but for now, unfortunately, you'll have to do it yourself. 
@@ -10,3 +10,5 @@ Although I suggest doing that, here is a pretty vague explanation:
 3. RSA (CNG) decrypt the AES key with your private key.
 4. AES decrypt the file with the RSA (CNG) decrypted AES key.
 5. Output the data into some file with the extension of `.zip`.
+
+Don't worry, a script to do this will be coming!
