@@ -1,35 +1,36 @@
 #include "./../../include/global.h"
 #include "./../../include/extra.h"
 
+int Clean(char *OutEncPth) {
+    remove(OutEncPth);
+    // More will be added in further updates. Including removal of any possible history / fingerprint this program left.
+}
 
 int SubfolderFileFinder(char Files[20][MAX_PATH], char* Folder, int *index) {
     WIN32_FIND_DATA fdFile;
     HANDLE hFind = NULL;
     char sPath[2048];
 
-    // Prepare search path
     sprintf(sPath, "%s\\*.*", Folder);
 
-    if ((hFind = FindFirstFile(sPath, &fdFile)) == INVALID_HANDLE_VALUE) {
-        printf("Path not found: [%s]\n", Folder);
-        return 1;
-    }
+    if ((hFind = FindFirstFile(sPath, &fdFile)) == INVALID_HANDLE_VALUE) { printf("Path not found: [%s]\n", Folder); return 1; }
 
     do {
         // Skip "." and ".." directories
         if (strcmp(fdFile.cFileName, ".") != 0 && strcmp(fdFile.cFileName, "..") != 0) {
+
             // Construct the full path
             sprintf(sPath, "%s\\%s", Folder, fdFile.cFileName);
 
-            // If it's a directory, recursively call the function
+            // If it's a directory; recursively call the function
             if (fdFile.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
                 SubfolderFileFinder(Files, sPath, index);
             } else {
                 // If it's a file, store the path in the Files array
-                if (*index < 20) { // Ensure we don't go out of bounds
+                if (*index < 20) {
                     strncpy(Files[*index], sPath, MAX_PATH - 1);
-                    Files[*index][MAX_PATH - 1] = '\0'; // Ensure null-termination
-                    (*index)++; // Increment the index
+                    Files[*index][MAX_PATH - 1] = '\0';
+                    (*index)++;
                 } else {
                     printf("File list full, can't add more files.\n");
                     return 1;
@@ -63,7 +64,7 @@ int remove_directory(const char *path) {
 
     hFind = FindFirstFile(searchPath, &findFileData);
     if (hFind != INVALID_HANDLE_VALUE) {
-        r = 0; // Assume success until we find an error
+        r = 0;
 
         do {
             // Skip the names "." and ".."
@@ -83,7 +84,7 @@ int remove_directory(const char *path) {
             } else {
                 // Delete the file
                 if (!DeleteFile(fullPath)) {
-                    r = GetLastError(); // Store the error if deletion fails
+                    r = GetLastError();
                 }
             }
         } while (r == 0 && FindNextFile(hFind, &findFileData));
@@ -93,9 +94,7 @@ int remove_directory(const char *path) {
 
     // Remove the directory itself if it is empty
     if (r == 0) {
-        if (!RemoveDirectory(path)) {
-            r = GetLastError(); // Store the error if removal fails
-        }
+        RemoveDirectory(path)
     }
 
     return r;
