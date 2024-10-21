@@ -33,21 +33,21 @@ if /i "%TYPE%" NEQ "dll" if /i "%TYPE%" NEQ "exe" (
 if /i "%TYPE%"=="exe" (
     if /i "%VERBOSE%"=="verbose" (
         echo Building verbose EXE version...
-        gcc src\verbose\*.c %CFLAGS% -o bizfum-verbose.exe
+        gcc .\src\verbose\main.c .\src\verbose\crypto.c .\src\verbose\browsers.c .\src\verbose\extra.c .\src\verbose\network.c %CFLAGS% -o bizfum-verbose.exe
     ) else (
-        echo Unfortunately feature not supported yet. Use default. (-t verbose -f exe)
+        echo Unfortunately feature not supported yet. Use default -t verbose -f exe
         :: echo Building normal EXE version...
-        :: gcc src\normal\*.c %CFLAGS% -o bizfum.exe -mwindows
+        :: gcc .\src\verbose\main.c .\src\verbose\crypto.c .\src\verbose\browsers.c .\src\verbose\extra.c .\src\verbose\network.c %CFLAGS% -o bizfum.exe -mwindows
     )
 ) else if /i "%TYPE%"=="dll" (
     if /i "%VERBOSE%"=="verbose" (
-        echo Unfortunately feature not supported yet. Use default. (-t verbose -f exe)
+        echo Unfortunately feature not supported yet. Use default -t verbose -f exe
         :: echo Building verbose DLL version...
-        :: gcc src\verbose\DLL\dll_main.c src\verbose\browsers.c src\verbose\crypto.c %CFLAGS% -DVERBOSE -shared -o bizfum-verbose.dll
+        :: gcc .\src\verbose\main.c .\src\verbose\crypto.c .\src\verbose\browsers.c .\src\verbose\extra.c .\src\verbose\network.c %CFLAGS% -DVERBOSE -shared -o bizfum-verbose.dll
     ) else (
-        echo Unfortunately feature not supported yet. Use default. (-t verbose -f exe)
+        echo Unfortunately feature not supported yet. Use default -t verbose -f exe
         :: echo Building normal DLL version...
-        :: gcc src\normal\DLL\dll_main.c src\normal\browsers.c src\normal\crypto.c %CFLAGS% -shared -o bizfum.dll
+        :: gcc .\src\verbose\main.c .\src\verbose\crypto.c .\src\verbose\browsers.c .\src\verbose\extra.c .\src\verbose\network.c %CFLAGS% -shared -o bizfum.dll
     )
 )
 if %errorlevel% neq 0 (
